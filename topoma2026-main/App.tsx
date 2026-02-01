@@ -478,7 +478,7 @@ const App: React.FC = () => {
       <input type="file" accept=".xlsx, .xls" className="hidden" ref={excelInputRef} onChange={(e) => handleFileUpload(e, 'XLS')} />
 
       {/* --- TOOLBAR --- */}
-      <div className="bg-neutral-100 border-b border-neutral-300 p-1 flex items-center gap-1 shadow-sm shrink-0 h-10 z-50">
+      <div className="bg-neutral-100 border-b border-neutral-300 p-1 flex items-center gap-1 shadow-sm shrink-0 h-10 z-[100]">
           <div className="flex items-center px-2 mr-1 border-r border-neutral-300 gap-1.5">
              <span className="text-xs font-black text-neutral-700 hidden sm:block">topoma</span>
           </div>
@@ -494,7 +494,7 @@ const App: React.FC = () => {
                       <i className="fas fa-plus text-black font-bold text-xs absolute top-1.5 left-2"></i>
                       <i className="fas fa-layer-group text-yellow-600"></i>
                    </button>
-                   <div className="absolute top-full left-0 mt-1 bg-white border border-neutral-400 shadow-lg rounded-none w-48 hidden group-hover:block z-50">
+                   <div className="absolute top-full left-0 mt-1 bg-white border border-neutral-400 shadow-lg rounded-none w-48 hidden group-hover:block z-[110]">
                        <button onClick={() => handleFileClick(kmlInputRef)} className="w-full text-left px-3 py-2 text-xs hover:bg-blue-100 flex items-center gap-2"><i className="fas fa-globe text-blue-500"></i> Ajouter KML/KMZ</button>
                        <button onClick={() => handleFileClick(shpInputRef)} className="w-full text-left px-3 py-2 text-xs hover:bg-blue-100 flex items-center gap-2"><i className="fas fa-shapes text-green-500"></i> Ajouter Shapefile (ZIP)</button>
                        <button onClick={() => handleFileClick(dxfInputRef)} className="w-full text-left px-3 py-2 text-xs hover:bg-blue-100 flex items-center gap-2"><i className="fas fa-pencil-ruler text-purple-500"></i> Ajouter DXF</button>
@@ -509,7 +509,7 @@ const App: React.FC = () => {
               <div className="relative">
                   <button onClick={() => { setShowGoToPanel(!showGoToPanel); setShowExcelPanel(false); setShowSearchPanel(false); }} className={`h-8 px-2 flex items-center justify-center rounded border transition-colors ${showGoToPanel ? 'bg-neutral-200 border-neutral-400' : 'hover:bg-neutral-200 border-transparent hover:border-neutral-300'}`}><i className="fas fa-map-marker-alt text-red-600 mr-1"></i> <span className="text-xs font-bold text-neutral-700">Go To XY</span></button>
                   {showGoToPanel && (
-                      <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-neutral-300 p-3 w-64 z-50">
+                      <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-neutral-300 p-3 w-64 z-[110]">
                           <div className="flex justify-between items-center mb-2 border-b border-neutral-100 pb-1"><span className="text-xs font-bold text-neutral-700">Go To XY</span><CloseButton onClick={() => setShowGoToPanel(false)} /></div>
                           <div className="space-y-2">
                               <div><label className="block text-[10px] text-neutral-500 mb-0.5">Projection</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border border-neutral-300 rounded p-1 bg-neutral-50 focus:outline-none focus:border-blue-400">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div>
@@ -530,7 +530,7 @@ const App: React.FC = () => {
                <div className="relative">
                   <button onClick={() => { setShowSearchPanel(!showSearchPanel); setShowGoToPanel(false); }} className={`h-8 w-8 flex items-center justify-center rounded border ${showSearchPanel ? 'bg-blue-100 text-blue-700' : 'hover:bg-neutral-200 text-neutral-600'}`}><i className="fas fa-search"></i></button>
                   {showSearchPanel && (
-                      <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-xl border border-neutral-300 w-64 z-50 overflow-hidden">
+                      <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-xl border border-neutral-300 w-64 z-[110] overflow-hidden">
                           <div className="p-2 border-b bg-neutral-50 flex items-center gap-2"><i className="fas fa-search text-neutral-400 text-xs"></i><input autoFocus type="text" className="w-full bg-transparent text-xs outline-none" placeholder="Rechercher..." value={searchQuery} onChange={handleSearchInput}/></div>
                           {searchResults.length > 0 ? (<ul className="max-h-60 overflow-y-auto">{searchResults.map((result) => (<li key={result.place_id}><button onClick={() => handleSelectSearchResult(result)} className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 border-b last:border-0 flex flex-col gap-0.5"><span className="font-bold text-neutral-700 truncate">{result.display_name.split(',')[0]}</span><span className="text-[10px] text-neutral-500 truncate">{result.display_name}</span></button></li>))}</ul>) : (searchQuery.length > 2 && <div className="p-3 text-center text-xs text-neutral-400 italic">Aucun résultat.</div>)}
                       </div>
@@ -546,13 +546,34 @@ const App: React.FC = () => {
       <div className="flex-grow flex relative overflow-hidden bg-white">
           
           {/* LEFT: Export Tools */}
-          <div className={`${toolboxOpen ? 'w-80' : 'w-0 overflow-hidden'} transition-all duration-300 bg-white border-r border-neutral-300 flex flex-col shrink-0 relative z-20`}>
+          <div className={`${toolboxOpen ? 'w-80' : 'w-0 overflow-hidden'} transition-all duration-300 bg-white border-r border-neutral-300 flex flex-col shrink-0 relative z-[20]`}>
                <div className="w-80 flex flex-col h-full">
                   <div className="bg-neutral-100 p-2 border-b font-bold text-xs text-green-800 flex justify-between items-center shrink-0">
-                    <span><i className="fas fa-file-image mr-1"></i> Exporter GeoTIFF</span>
+                    <span><i className="fas fa-file-image mr-1"></i> Importer /Exporter GeoTIFF</span>
                     <CloseButton onClick={() => setToolboxOpen(false)} />
                   </div>
                   <div className="flex-grow overflow-y-auto p-3 bg-neutral-50">
+                      
+                      {/* LARGE IMPORT BUTTONS */}
+                      <div className="grid grid-cols-4 gap-2 mb-4">
+                          <button onClick={() => handleFileClick(kmlInputRef)} title="KML/KMZ" className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-blue-50 hover:border-blue-300 transition-all group">
+                              <i className="fas fa-globe text-2xl text-blue-500 group-hover:scale-110 transition-transform"></i>
+                              <span className="text-[9px] font-bold text-neutral-500 mt-1">KML</span>
+                          </button>
+                          <button onClick={() => handleFileClick(shpInputRef)} title="Shapefile" className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-green-50 hover:border-green-300 transition-all group">
+                              <i className="fas fa-shapes text-2xl text-green-500 group-hover:scale-110 transition-transform"></i>
+                              <span className="text-[9px] font-bold text-neutral-500 mt-1">SHP</span>
+                          </button>
+                          <button onClick={() => handleFileClick(geojsonInputRef)} title="GeoJSON" className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-teal-50 hover:border-teal-300 transition-all group">
+                              <i className="fas fa-file-code text-2xl text-teal-500 group-hover:scale-110 transition-transform"></i>
+                              <span className="text-[9px] font-bold text-neutral-500 mt-1">JSON</span>
+                          </button>
+                          <button onClick={() => handleFileClick(dxfInputRef)} title="DXF AutoCAD" className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-purple-50 hover:border-purple-300 transition-all group">
+                              <i className="fas fa-pencil-ruler text-2xl text-purple-500 group-hover:scale-110 transition-transform"></i>
+                              <span className="text-[9px] font-bold text-neutral-500 mt-1">DXF</span>
+                          </button>
+                      </div>
+
                       <div className="border bg-white mb-2 shadow-sm rounded-sm">
                           <div className="bg-neutral-200 px-2 py-1.5 text-xs font-bold border-b flex items-center gap-2">Extraction Raster</div>
                           <div className="p-3 text-xs space-y-4">
@@ -580,9 +601,9 @@ const App: React.FC = () => {
           </div>
 
           {/* CENTER: MAP */}
-          <div className="flex-grow relative bg-white z-10">
+          <div className="flex-grow relative bg-white z-[10]">
               {/* Drawing Tools Container */}
-              <div className={`absolute top-2 transition-all duration-300 z-30 flex flex-col items-end pointer-events-none gap-2 ${tocOpen ? 'right-[calc(20rem+0.5rem)]' : 'right-2'}`}>
+              <div className={`absolute top-2 transition-all duration-300 z-[70] flex flex-col items-end pointer-events-none gap-2 ${tocOpen ? 'right-[calc(20rem+0.5rem)]' : 'right-2'}`}>
                   
                   {/* Unified Basemap Selector */}
                   <div className="relative pointer-events-auto">
@@ -595,7 +616,7 @@ const App: React.FC = () => {
                     </button>
                     
                     {basemapPanelOpen && (
-                        <div className="absolute top-0 right-12 bg-white rounded-lg shadow-2xl border border-neutral-200 w-64 z-[100] overflow-hidden animate-scale-in origin-right">
+                        <div className="absolute top-0 right-12 bg-white rounded-lg shadow-2xl border border-neutral-200 w-64 z-[110] overflow-hidden animate-scale-in origin-right">
                             <div className="bg-neutral-100 p-2 border-b flex justify-between items-center">
                                 <span className="text-[11px] font-bold text-neutral-700">Sélectionner le fond de plan</span>
                                 <CloseButton onClick={() => setBasemapPanelOpen(false)} />
@@ -624,7 +645,7 @@ const App: React.FC = () => {
                   <div className="h-1"></div>
 
                   <button onClick={() => { setShowExcelPanel(!showExcelPanel); setShowGoToPanel(false); }} className="pointer-events-auto w-10 h-10 bg-white rounded-lg shadow-md border hover:bg-neutral-50 flex items-center justify-center text-green-600"><i className="fas fa-file-excel text-lg"></i></button>
-                  {showExcelPanel && (<div className="pointer-events-auto mt-2 bg-white rounded-lg shadow-xl border p-3 w-64 absolute top-full right-0 z-50"><div className="flex justify-between items-center mb-2 border-b"><span className="text-xs font-bold">Import Excel XY</span><CloseButton onClick={() => setShowExcelPanel(false)} /></div><div className="space-y-3"><div><label className="block text-[10px] mb-0.5">Projection</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border rounded p-1">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div><div className="border border-dashed rounded p-2 text-center"><button onClick={() => handleFileClick(excelInputRef)} className="text-xs text-blue-600 font-medium underline">Choisir un fichier</button><div className="text-[10px] truncate">{selectedExcelFile ? selectedExcelFile.name : "Aucun fichier"}</div></div><button onClick={processExcelFile} disabled={!selectedExcelFile} className={`w-full text-white text-xs py-1.5 rounded ${selectedExcelFile ? 'bg-green-600' : 'bg-neutral-300'}`}>Charger les points</button></div></div>)}
+                  {showExcelPanel && (<div className="pointer-events-auto mt-2 bg-white rounded-lg shadow-xl border p-3 w-64 absolute top-full right-0 z-[110]"><div className="flex justify-between items-center mb-2 border-b"><span className="text-xs font-bold">Import Excel XY</span><CloseButton onClick={() => setShowExcelPanel(false)} /></div><div className="space-y-3"><div><label className="block text-[10px] mb-0.5">Projection</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border rounded p-1">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div><div className="border border-dashed rounded p-2 text-center"><button onClick={() => handleFileClick(excelInputRef)} className="text-xs text-blue-600 font-medium underline">Choisir un fichier</button><div className="text-[10px] truncate">{selectedExcelFile ? selectedExcelFile.name : "Aucun fichier"}</div></div><button onClick={processExcelFile} disabled={!selectedExcelFile} className={`w-full text-white text-xs py-1.5 rounded ${selectedExcelFile ? 'bg-green-600' : 'bg-neutral-300'}`}>Charger les points</button></div></div>)}
                   <button onClick={() => toggleTool('Edit')} className={`pointer-events-auto w-10 h-10 rounded-lg shadow-md border flex items-center justify-center ${activeTool === 'Edit' ? 'bg-orange-500 text-white' : 'bg-white text-neutral-700'}`}><i className="fas fa-pen-to-square text-lg"></i></button>
                   <button onClick={() => mapComponentRef.current?.undo()} className="pointer-events-auto w-10 h-10 rounded-lg shadow-md border flex items-center justify-center bg-white text-neutral-700"><i className="fas fa-rotate-left text-lg"></i></button>
                   <button onClick={() => toggleTool('Rectangle')} className={`pointer-events-auto w-10 h-10 rounded-lg shadow-md border flex items-center justify-center ${activeTool === 'Rectangle' ? 'bg-blue-600 text-white' : 'bg-white'}`}><i className="far fa-square text-lg"></i></button>
@@ -652,7 +673,7 @@ const App: React.FC = () => {
 
               {/* ATTRIBUTE TABLE OVERLAY */}
               {showAttrTable && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-white border-t-2 border-blue-500 h-1/3 z-[60] flex flex-col shadow-2xl animate-slide-up">
+                  <div className={`absolute bottom-0 left-0 ${tocOpen ? 'right-80' : 'right-0'} bg-white border-t-2 border-blue-500 h-1/3 z-[80] flex flex-col shadow-2xl animate-slide-up transition-all duration-300`}>
                       <div className="bg-neutral-100 p-2 flex justify-between items-center border-b">
                           <span className="text-xs font-bold text-neutral-700 flex items-center gap-2">
                               <i className="fas fa-table text-blue-600"></i> Table d'attributs: {attrTableTitle}
@@ -692,7 +713,7 @@ const App: React.FC = () => {
 
               {/* LABEL PICKER MODAL */}
               {labelPicker && (
-                  <div className="absolute inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
                       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
                           <div className="bg-neutral-100 p-3 border-b flex justify-between items-center">
                               <span className="text-sm font-bold">Sélectionner le champ d'étiquette</span>
@@ -721,17 +742,11 @@ const App: React.FC = () => {
           </div>
 
           {/* RIGHT: TOC (Couches - Sidebar Panel) */}
-          <div className={`${tocOpen ? 'w-80 border-l' : 'w-0 overflow-hidden'} transition-all duration-300 bg-white border-neutral-300 flex flex-col absolute right-0 top-0 h-full z-40 shadow-2xl shrink-0`}>
+          <div className={`${tocOpen ? 'w-80 border-l' : 'w-0 overflow-hidden'} transition-all duration-300 bg-white border-neutral-300 flex flex-col absolute right-0 top-0 h-full z-[90] shadow-2xl shrink-0`}>
               <div className="w-80 flex flex-col h-full">
                 <div className="bg-neutral-100 p-2.5 border-b font-bold text-xs text-neutral-700 flex justify-between items-center shrink-0">
                     <span className="flex items-center gap-2"><i className="fas fa-layer-group text-blue-600"></i> Couches de données</span>
                     <div className="flex gap-3 items-center">
-                        <div className="flex gap-1.5 border-r pr-2 mr-1">
-                          <button onClick={() => handleFileClick(kmlInputRef)} title="KML" className="text-blue-500 hover:scale-110"><i className="fas fa-globe"></i></button>
-                          <button onClick={() => handleFileClick(shpInputRef)} title="SHP" className="text-green-500 hover:scale-110"><i className="fas fa-shapes"></i></button>
-                          <button onClick={() => handleFileClick(geojsonInputRef)} title="JSON" className="text-teal-500 hover:scale-110"><i className="fas fa-file-code"></i></button>
-                          <button onClick={() => handleFileClick(dxfInputRef)} title="DXF" className="text-purple-500 hover:scale-110"><i className="fas fa-pencil-ruler"></i></button>
-                        </div>
                         <CloseButton onClick={() => setTocOpen(false)} />
                     </div>
                 </div>
@@ -772,7 +787,7 @@ const App: React.FC = () => {
       </div>
 
       {/* STATUS BAR */}
-      <div className="bg-neutral-200 border-t border-neutral-300 h-6 flex items-center px-2 text-[10px] text-neutral-600 justify-between shrink-0 z-50">
+      <div className="bg-neutral-200 border-t border-neutral-300 h-6 flex items-center px-2 text-[10px] text-neutral-600 justify-between shrink-0 z-[100]">
           <div className="flex gap-6 items-center">
               <div className="flex gap-3 font-mono text-neutral-700"><span className="w-20 text-right">{mouseCoords.y}</span><span className="w-20 text-left">{mouseCoords.x}</span></div>
               <div className="flex items-center gap-1 border-l border-neutral-300 pl-4"><span>Scale:</span><select value={selectedScale} onChange={(e) => handleScaleChange(Number(e.target.value))} className="bg-neutral-200 border-none focus:ring-0 p-0 text-[10px] h-4">{MAP_SCALES.map(s => <option key={s.value} value={s.value}>1:{s.value}</option>)}</select></div>
