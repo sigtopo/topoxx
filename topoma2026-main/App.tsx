@@ -591,7 +591,7 @@ const App: React.FC = () => {
                         title="Changer de fond de plan"
                         className={`w-10 h-10 rounded-lg shadow-md border flex items-center justify-center transition-all hover:scale-105 ${basemapPanelOpen ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-blue-600'}`}
                     >
-                        <i className={`fas fa-layer-group text-lg`}></i>
+                        <i className={`fas fa-globe-africa text-lg`}></i>
                     </button>
                     
                     {basemapPanelOpen && (
