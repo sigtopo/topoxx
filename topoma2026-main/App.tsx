@@ -161,6 +161,7 @@ const App: React.FC = () => {
   const [toolboxOpen, setToolboxOpen] = useState(false); 
   const [showGoToPanel, setShowGoToPanel] = useState(false); 
   const [showExcelPanel, setShowExcelPanel] = useState(false); 
+  const [showExcelHelp, setShowExcelHelp] = useState(false); 
   
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -509,12 +510,14 @@ const App: React.FC = () => {
               <div className="relative">
                   <button onClick={() => { setShowGoToPanel(!showGoToPanel); setShowExcelPanel(false); setShowSearchPanel(false); }} className={`h-8 px-2 flex items-center justify-center rounded border transition-colors ${showGoToPanel ? 'bg-neutral-200 border-neutral-400' : 'hover:bg-neutral-200 border-transparent hover:border-neutral-300'}`}><i className="fas fa-map-marker-alt text-red-600 mr-1"></i> <span className="text-xs font-bold text-neutral-700">Go XY</span></button>
                   {showGoToPanel && (
-                      <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-neutral-300 p-3 w-64 z-[110]">
-                          <div className="flex justify-between items-center mb-2 border-b border-neutral-100 pb-1"><span className="text-xs font-bold text-neutral-700">Go To XY</span><CloseButton onClick={() => setShowGoToPanel(false)} /></div>
-                          <div className="space-y-2">
-                              <div><label className="block text-[10px] text-neutral-500 mb-0.5">Projection</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border border-neutral-300 rounded p-1 bg-neutral-50 focus:outline-none focus:border-blue-400">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div>
-                              <div className="grid grid-cols-2 gap-2"><div><label className="block text-[10px] text-neutral-500 mb-0.5">X</label><input type="text" value={manualX} onChange={(e) => setManualX(e.target.value)} className="w-full text-xs border border-neutral-300 rounded p-1" /></div><div><label className="block text-[10px] text-neutral-500 mb-0.5">Y</label><input type="text" value={manualY} onChange={(e) => setManualY(e.target.value)} className="w-full text-xs border border-neutral-300 rounded p-1" /></div></div>
-                              <button onClick={handleManualAddPoint} className="w-full bg-blue-600 text-white text-xs py-1.5 rounded hover:bg-blue-700 font-medium">Localiser</button>
+                      <div className="fixed md:absolute inset-0 md:inset-auto md:top-full md:left-0 flex items-center justify-center md:block z-[210] p-4 md:p-0 bg-black/40 md:bg-transparent">
+                          <div className="bg-white rounded-lg shadow-2xl border border-neutral-300 p-3 w-64 animate-scale-in">
+                              <div className="flex justify-between items-center mb-2 border-b border-neutral-100 pb-1"><span className="text-xs font-bold text-neutral-700">Go To XY</span><CloseButton onClick={() => setShowGoToPanel(false)} /></div>
+                              <div className="space-y-2">
+                                  <div><label className="block text-[10px] text-neutral-500 mb-0.5">Projection</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border border-neutral-300 rounded p-1 bg-neutral-50 focus:outline-none focus:border-blue-400">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div>
+                                  <div className="grid grid-cols-2 gap-2"><div><label className="block text-[10px] text-neutral-500 mb-0.5">X</label><input type="text" value={manualX} onChange={(e) => setManualX(e.target.value)} className="w-full text-xs border border-neutral-300 rounded p-1" /></div><div><label className="block text-[10px] text-neutral-500 mb-0.5">Y</label><input type="text" value={manualY} onChange={(e) => setManualY(e.target.value)} className="w-full text-xs border border-neutral-300 rounded p-1" /></div></div>
+                                  <button onClick={handleManualAddPoint} className="w-full bg-blue-600 text-white text-xs py-1.5 rounded hover:bg-blue-700 font-medium">Localiser</button>
+                              </div>
                           </div>
                       </div>
                   )}
@@ -644,26 +647,49 @@ const App: React.FC = () => {
                   
                   <div className="h-1"></div>
 
-                  <button onClick={() => { setShowExcelPanel(!showExcelPanel); setShowGoToPanel(false); }} className="pointer-events-auto w-10 h-10 bg-white rounded-lg shadow-md border hover:bg-neutral-50 flex items-center justify-center text-green-600"><i className="fas fa-file-excel text-lg"></i></button>
-                  {showExcelPanel && (<div className="pointer-events-auto mt-2 bg-white rounded-lg shadow-xl border p-3 w-64 absolute top-full right-0 z-[110]"><div className="flex justify-between items-center mb-2 border-b"><span className="text-xs font-bold">Import Excel XY</span><CloseButton onClick={() => setShowExcelPanel(false)} /></div><div className="space-y-3"><div><label className="block text-[10px] mb-0.5">Projection</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border rounded p-1">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div><div className="border border-dashed rounded p-2 text-center"><button onClick={() => handleFileClick(excelInputRef)} className="text-xs text-blue-600 font-medium underline">Choisir un fichier</button><div className="text-[10px] truncate">{selectedExcelFile ? selectedExcelFile.name : "Aucun fichier"}</div></div><button onClick={processExcelFile} disabled={!selectedExcelFile} className={`w-full text-white text-xs py-1.5 rounded ${selectedExcelFile ? 'bg-green-600' : 'bg-neutral-300'}`}>Charger les points</button></div></div>)}
+                  <div className="relative pointer-events-auto">
+                      <button onClick={() => { setShowExcelPanel(!showExcelPanel); setShowGoToPanel(false); }} className="w-10 h-10 bg-white rounded-lg shadow-md border hover:bg-neutral-50 flex items-center justify-center text-green-600 transition-transform hover:scale-105"><i className="fas fa-file-excel text-lg"></i></button>
+                      {showExcelPanel && (
+                          <div className="mt-2 bg-white rounded-lg shadow-xl border p-3 w-64 absolute top-full right-0 z-[110] animate-scale-in origin-top-right">
+                              <div className="flex justify-between items-center mb-2 border-b pb-1">
+                                  <span className="text-xs font-bold flex items-center gap-1.5">
+                                      Import Excel XY
+                                      <button onClick={() => setShowExcelHelp(true)} className="text-blue-500 hover:text-blue-700 text-sm">
+                                          <i className="fas fa-info-circle"></i>
+                                      </button>
+                                  </span>
+                                  <CloseButton onClick={() => setShowExcelPanel(false)} />
+                              </div>
+                              <div className="space-y-3">
+                                  <div><label className="block text-[10px] mb-0.5 text-neutral-500">Projection (Zone)</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border rounded p-1 bg-neutral-50">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div>
+                                  <div className="border border-dashed border-neutral-300 rounded-lg p-3 text-center bg-neutral-50">
+                                      <i className="fas fa-folder-open text-blue-500 mb-1"></i>
+                                      <button onClick={() => handleFileClick(excelInputRef)} className="block w-full text-xs text-blue-600 font-bold hover:underline mb-1">Choisir un fichier</button>
+                                      <div className="text-[10px] text-neutral-400 truncate">{selectedExcelFile ? selectedExcelFile.name : "Aucun fichier sélectionné"}</div>
+                                  </div>
+                                  <button onClick={processExcelFile} disabled={!selectedExcelFile} className={`w-full text-white text-xs py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${selectedExcelFile ? 'bg-green-600 hover:bg-green-700 shadow-md' : 'bg-neutral-300 cursor-not-allowed'}`}><i className="fas fa-upload text-[10px]"></i> Charger les points</button>
+                              </div>
+                          </div>
+                      )}
+                  </div>
                   
                   {/* DRAWING TOOLS (Ordered as requested: Point, Line, Polygon, Rectangle, Edit, Undo) */}
-                  <button onClick={() => toggleTool('Point')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center ${activeTool === 'Point' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700'}`} title="Dessiner un Point"><i className="fas fa-map-marker-alt text-base"></i></button>
-                  <button onClick={() => toggleTool('Line')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center ${activeTool === 'Line' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700'}`} title="Dessiner une Ligne"><i className="fas fa-slash text-base"></i></button>
-                  <button onClick={() => toggleTool('Polygon')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center ${activeTool === 'Polygon' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700'}`} title="Dessiner un Mضلع"><i className="fas fa-draw-polygon text-base"></i></button>
-                  <button onClick={() => toggleTool('Rectangle')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center ${activeTool === 'Rectangle' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700'}`} title="Dessiner un Rectangle"><i className="far fa-square text-base"></i></button>
-                  <button onClick={() => toggleTool('Edit')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center ${activeTool === 'Edit' ? 'bg-orange-500 text-white' : 'bg-white text-neutral-700'}`} title="Modifier"><i className="fas fa-pen-to-square text-base"></i></button>
-                  <button onClick={() => mapComponentRef.current?.undo()} className="pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center bg-white text-neutral-700" title="Tراجع"><i className="fas fa-rotate-left text-base"></i></button>
+                  <button onClick={() => toggleTool('Point')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Point' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="Dessiner un Point"><i className="fas fa-map-marker-alt text-base"></i></button>
+                  <button onClick={() => toggleTool('Line')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Line' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="Dessiner une Ligne"><i className="fas fa-slash text-base"></i></button>
+                  <button onClick={() => toggleTool('Polygon')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Polygon' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="Dessiner un Mضلع"><i className="fas fa-draw-polygon text-base"></i></button>
+                  <button onClick={() => toggleTool('Rectangle')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Rectangle' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="Dessiner un Rectangle"><i className="far fa-square text-base"></i></button>
+                  <button onClick={() => toggleTool('Edit')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Edit' ? 'bg-orange-500 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="Modifier"><i className="fas fa-pen-to-square text-base"></i></button>
+                  <button onClick={() => mapComponentRef.current?.undo()} className="pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center bg-white text-neutral-700 hover:bg-neutral-50 transition-all active:scale-90" title="Tراجع"><i className="fas fa-rotate-left text-base"></i></button>
               </div>
 
-              {/* My Location Button (Bottom-Right - Raised higher as requested) */}
-              <div className={`absolute bottom-14 transition-all duration-300 z-[70] pointer-events-none ${tocOpen ? 'right-[calc(20rem+1rem)]' : 'right-4'}`}>
+              {/* My Location Button (Bottom-Right - Raised higher) */}
+              <div className={`absolute bottom-20 transition-all duration-300 z-[70] pointer-events-none ${tocOpen ? 'right-[calc(20rem+1rem)]' : 'right-4'}`}>
                   <button 
                     onClick={() => mapComponentRef.current?.locateUser()}
                     title="Ma position"
-                    className="pointer-events-auto w-8 h-8 rounded-full shadow-lg border border-neutral-200 bg-white hover:bg-neutral-100 flex items-center justify-center text-blue-600 transition-all hover:scale-110 active:scale-95"
+                    className="pointer-events-auto w-10 h-10 rounded-full shadow-lg border border-neutral-200 bg-white hover:bg-neutral-100 flex items-center justify-center text-blue-600 transition-all hover:scale-110 active:scale-95"
                   >
-                      <i className="fas fa-location-crosshairs text-base"></i>
+                      <i className="fas fa-location-crosshairs text-lg"></i>
                   </button>
               </div>
 
@@ -683,6 +709,26 @@ const App: React.FC = () => {
                   }
                 }} 
               />
+
+              {/* EXCEL IMPORT HELP MODAL */}
+              {showExcelHelp && (
+                  <div className="fixed inset-0 bg-black/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowExcelHelp(false)}>
+                      <div className="bg-white p-2 rounded-xl shadow-2xl max-w-2xl w-full relative animate-scale-in" onClick={e => e.stopPropagation()}>
+                          <div className="absolute top-[-10px] right-[-10px]"><CloseButton onClick={() => setShowExcelHelp(false)} /></div>
+                          <div className="bg-neutral-100 px-4 py-2 rounded-t-lg border-b font-bold text-neutral-700 text-sm mb-2 flex items-center gap-2">
+                              <i className="fas fa-info-circle text-blue-500"></i> Format de fichier requis (Exemple)
+                          </div>
+                          <img 
+                              src="https://ia902900.us.archive.org/14/items/capture-decran-2026-02-01-200134/Capture%20d%27%C3%A9cran%202026-02-01%20200134.png" 
+                              alt="Format Excel Help" 
+                              className="w-full h-auto rounded border shadow-inner" 
+                          />
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg text-[11px] text-blue-800 italic">
+                              * Assurez-vous que vos colonnes sont nommées 'X' et 'Y' (ou 'Easting'/'Northing').
+                          </div>
+                      </div>
+                  </div>
+              )}
 
               {/* ATTRIBUTE TABLE OVERLAY */}
               {showAttrTable && (
