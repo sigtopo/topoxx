@@ -105,8 +105,6 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const selectedZoneRef = useRef(selectedZone); 
   const sketchRef = useRef<any>(null);
-  const helpTooltipElementRef = useRef<HTMLElement | null>(null);
-  const helpTooltipRef = useRef<Overlay | null>(null);
   const measureTooltipElementRef = useRef<HTMLElement | null>(null);
   const measureTooltipRef = useRef<Overlay | null>(null);
   const pointerMoveListenerRef = useRef<any>(null);
@@ -155,7 +153,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
           labelText = feature.get('name');
       }
 
-      // Professional Black Label with White Halo
+      // Professional Black Label with thick White Halo as requested
       const textStyle = new Text({
           text: labelText,
           font: 'bold 12px Roboto, sans-serif',
@@ -170,12 +168,12 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       const type = geometry.getType();
 
       return new Style({
-          stroke: new Stroke({ color: '#91E400', width: 3 }), // Lime Green Border
-          fill: new Fill({ color: 'rgba(0, 255, 64, 0.15)' }), // Phosphorescent Green Fill (Transparent)
+          stroke: new Stroke({ color: '#91E400', width: 3 }), // Lime Green Border requested
+          fill: new Fill({ color: 'rgba(0, 255, 64, 0.2)' }), // Phosphorescent Green Fill requested
           text: labelText ? textStyle : undefined,
           image: type === 'Point' ? new CircleStyle({
               radius: 7,
-              fill: new Fill({ color: '#00FF40' }), // Phosphorescent Green
+              fill: new Fill({ color: '#00FF40' }), // Phosphorescent Green requested
               stroke: new Stroke({ color: '#91E400', width: 2 })
           }) : undefined
       });
@@ -217,13 +215,6 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     measureTooltipElementRef.current.className = 'bg-black/75 text-white px-2 py-1 rounded text-xs whitespace-nowrap border border-white/20 shadow-sm pointer-events-none transform translate-y-[-10px]';
     measureTooltipRef.current = new Overlay({ element: measureTooltipElementRef.current, offset: [0, -15], positioning: 'bottom-center', stopEvent: false, insertFirst: false });
     mapRef.current?.addOverlay(measureTooltipRef.current);
-  };
-
-  const createHelpTooltip = () => {
-    if (helpTooltipElementRef.current) helpTooltipElementRef.current.parentNode?.removeChild(helpTooltipElementRef.current);
-    helpTooltipElementRef.current = document.createElement('div'); helpTooltipElementRef.current.className = 'hidden';
-    helpTooltipRef.current = new Overlay({ element: helpTooltipElementRef.current, offset: [15, 0], positioning: 'center-left' });
-    mapRef.current?.addOverlay(helpTooltipRef.current);
   };
 
   const showPointPopup = async (feature: Feature, coordinate: number[]) => {
@@ -445,7 +436,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     },
     setMeasureTool: (type, unit) => {
         if (drawInteractionRef.current) mapRef.current?.removeInteraction(drawInteractionRef.current);
-        currentMeasureUnitRef.current = unit; createMeasureTooltip(); createHelpTooltip();
+        currentMeasureUnitRef.current = unit; createMeasureTooltip();
         const draw = new Draw({ source: measureSourceRef.current, type: type === 'MeasureLength' ? 'LineString' : 'Polygon', style: measureStyle });
         draw.on('drawstart', (evt) => {
             sketchRef.current = evt.feature;
@@ -551,14 +542,14 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
                  <div className="flex flex-col text-[12px] custom-modal-font">
                      <div className="px-3 py-2 border-b flex justify-between items-center bg-white rounded-t-xl">
                          <span className="font-bold text-neutral-800 text-sm">{popupContent.label}</span>
-                         <button onClick={() => overlayRef.current?.setPosition(undefined)} className="text-red-600 hover:text-red-800 transition-colors">
-                            <i className="fas fa-times text-sm"></i>
+                         <button onClick={() => overlayRef.current?.setPosition(undefined)} className="bg-[#cc3333] hover:bg-red-700 text-white rounded-full w-5 h-5 flex items-center justify-center transition-colors shadow-sm">
+                            <i className="fas fa-times text-[10px]"></i>
                          </button>
                      </div>
                      
                      <div className="p-3 space-y-3 bg-white">
                          <div className="space-y-0.5">
-                             <div className="text-blue-600 font-bold text-[10px] mb-1">{popupContent.zoneLabel}</div>
+                             <div className="text-blue-600 font-bold text-[10px] mb-1 uppercase">{popupContent.zoneLabel}</div>
                              <div className="grid grid-cols-[16px_1fr] gap-x-1 text-neutral-700 leading-tight">
                                  <span className="font-bold text-neutral-300">X</span>
                                  <span className="font-mono text-[11px]">{popupContent.x.toFixed(2)}</span>
