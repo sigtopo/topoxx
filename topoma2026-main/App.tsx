@@ -107,6 +107,28 @@ const CloseButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
     </button>
 );
 
+const DeveloperFooter: React.FC = () => (
+    <div className="mt-8 pt-6 border-t border-neutral-200 text-center">
+        <p className="text-[11px] font-bold text-neutral-700 mb-1">réalisé par Jilit Mostafa</p>
+        <p className="text-[10px] text-neutral-600 mb-4 flex items-center justify-center gap-1">
+            jilitsig@gmail.com | +212 668 09 02 85 <i className="fas fa-phone-alt text-pink-600 text-[9px]"></i>
+        </p>
+        
+        <div className="flex justify-center gap-4 mb-4">
+            <a href="#" className="text-blue-600 text-base hover:scale-110 transition-transform"><i className="fab fa-facebook"></i></a>
+            <a href="#" className="text-pink-600 text-base hover:scale-110 transition-transform"><i className="fab fa-instagram"></i></a>
+            <a href="#" className="text-blue-800 text-base hover:scale-110 transition-transform"><i className="fab fa-linkedin"></i></a>
+            <a href="#" className="text-green-500 text-base hover:scale-110 transition-transform"><i className="fab fa-whatsapp"></i></a>
+        </div>
+
+        <p className="text-[10px] text-neutral-400 font-medium mb-3">Version 1.0 | © 2026 Tous droits réservés</p>
+        
+        <div className="flex justify-center">
+            <img src="https://flagpedia.net/data/flags/emoji/twitter/256x256/ma.png" alt="Maroc" className="h-5 w-auto" />
+        </div>
+    </div>
+);
+
 const App: React.FC = () => {
   const [exportData, setExportData] = useState<ExportData | null>(null);
   const [exportResult, setExportResult] = useState<ExportResult | null>(null);
@@ -324,6 +346,7 @@ const App: React.FC = () => {
     reader.readAsArrayBuffer(selectedExcelFile);
   };
 
+  // Fixed typo 'iNaN' to 'isNaN'
   const handleManualAddPoint = () => {
     const x = parseCoordinateValue(manualX);
     const y = parseCoordinateValue(manualY);
@@ -514,11 +537,7 @@ const App: React.FC = () => {
                               </div>
                           </div>
                       </div>
-                      <div className="mt-6 text-center text-[10px] text-neutral-600 leading-relaxed font-semibold uppercase tracking-wide">
-                          Royaume du Maroc <br/>
-                          Direction de la Cartographie <br/>
-                          Plateforme Nationale de l'Information Géospatiale
-                      </div>
+                      <DeveloperFooter />
                   </div>
                </div>
           </div>
@@ -669,28 +688,7 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="mt-8 border-t border-neutral-200 pt-6 text-center pb-6">
-                       <div className="text-[10px] text-neutral-700 font-bold mb-4 leading-relaxed uppercase tracking-widest">
-                           Agence Nationale de la Conservation Foncière,<br/>
-                           du Cadastre et de la Cartographie (ANCFCC)<br/>
-                           Royaume du Maroc
-                       </div>
-                       
-                       <div className="flex justify-center gap-5 text-lg mb-5">
-                           <a href="#" className="text-blue-800 hover:scale-110 transition-transform"><i className="fas fa-landmark"></i></a>
-                           <a href="#" className="text-blue-600 hover:scale-110 transition-transform"><i className="fas fa-envelope"></i></a>
-                           <a href="#" className="text-blue-900 hover:scale-110 transition-transform"><i className="fab fa-linkedin"></i></a>
-                       </div>
-
-                       <div className="text-[9px] text-neutral-400 font-medium leading-relaxed">
-                           Système d'Information Géographique National<br/>
-                           Direction de la Cartographie et de la Photogrammétrie<br/>
-                           © 2026 Tous droits réservés à l'État Marocain
-                       </div>
-                       <div className="mt-4 flex justify-center">
-                           <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj9eIul_VMdvnyDZGj8fRCDeWCSfK0mIYjYGYXDrCg5GI09syk3U6OMO7jlUZV10DYdpoG2Fyf7O7xcckf99GynWdKAQMmlS_st1s1Cumn-Ov-3fYw8M87_H_234Q0HvkZaHjhEUVefckQ/s0-rw/Flag_of_Morocco.gif" alt="Maroc" className="h-5 w-auto shadow-sm" />
-                       </div>
-                    </div>
+                    <DeveloperFooter />
                 </div>
               </div>
           </div>
