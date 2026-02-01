@@ -139,6 +139,9 @@ const App: React.FC = () => {
   const [attrTableTitle, setAttrTableTitle] = useState("");
   const [selectedAttrFeatureId, setSelectedAttrFeatureId] = useState<string | null>(null);
 
+  // Label Management
+  const [labelPicker, setLabelPicker] = useState<{ layerId: string, fields: string[] } | null>(null);
+
   const [locationName, setLocationName] = useState<string>("location");
   const [mouseCoords, setMouseCoords] = useState({ x: 'E0.0000', y: 'N0.0000' });
   const [manualX, setManualX] = useState<string>('');
@@ -196,6 +199,19 @@ const App: React.FC = () => {
       if (row._featureId) {
           setSelectedAttrFeatureId(row._featureId);
           mapComponentRef.current?.highlightFeature(row._featureId);
+      }
+  };
+
+  const openLabelPicker = (layer: LayerInfo) => {
+      if (!mapComponentRef.current) return;
+      const fields = mapComponentRef.current.getLayerAvailableFields(layer.id);
+      setLabelPicker({ layerId: layer.id, fields });
+  };
+
+  const selectLabelField = (fieldName: string) => {
+      if (labelPicker && mapComponentRef.current) {
+          mapComponentRef.current.setLayerLabelField(labelPicker.layerId, fieldName);
+          setLabelPicker(null);
       }
   };
 
@@ -379,7 +395,7 @@ const App: React.FC = () => {
     setZipBlob(null); setSelectedExcelFile(null); setLayers([]); setManualFeatures([]);
     setSelectedLayerId('manual'); setPointCounter(1); setLocationName("location");
     setSearchQuery(""); setSearchResults([]); setShowContactInfo(false);
-    setShowAttrTable(false); setAttrTableData([]);
+    setShowAttrTable(false); setAttrTableData([]); setLabelPicker(null);
   };
 
   return (
@@ -558,6 +574,35 @@ const App: React.FC = () => {
                       </div>
                   </div>
               )}
+
+              {/* LABEL PICKER MODAL */}
+              {labelPicker && (
+                  <div className="absolute inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+                      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
+                          <div className="bg-neutral-100 p-3 border-b flex justify-between items-center">
+                              <span className="text-sm font-bold">Sélectionner le champ d'étiquette</span>
+                              <button onClick={() => setLabelPicker(null)} className="text-neutral-500 hover:text-red-500"><i className="fas fa-times"></i></button>
+                          </div>
+                          <div className="p-4 space-y-2 max-h-[60vh] overflow-y-auto">
+                              <button 
+                                onClick={() => selectLabelField("")}
+                                className="w-full text-left px-3 py-2 text-xs border rounded hover:bg-neutral-100 font-bold text-red-600"
+                              >
+                                -- Aucune étiquette --
+                              </button>
+                              {labelPicker.fields.map(field => (
+                                  <button 
+                                    key={field} 
+                                    onClick={() => selectLabelField(field)}
+                                    className="w-full text-left px-3 py-2 text-xs border rounded hover:bg-blue-50 transition-colors"
+                                  >
+                                      {field}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                  </div>
+              )}
           </div>
 
           {/* RIGHT: TOC */}
@@ -590,7 +635,10 @@ const App: React.FC = () => {
                                     <span className={`truncate cursor-pointer hover:text-blue-600 transition-colors ${selectedLayerId === layer.id ? 'font-bold text-blue-700' : ''}`} onClick={() => handleLayerSelect(layer.id)} title={layer.name}>
                                         {layer.name}
                                     </span>
-                                    <button onClick={() => openAttributeTable(layer)} className="hidden group-hover:block text-blue-500 shrink-0"><i className="fas fa-table"></i></button>
+                                    <div className="hidden group-hover:flex gap-2 shrink-0">
+                                        <button onClick={() => openLabelPicker(layer)} title="Gérer les étiquettes" className="text-orange-500 hover:text-orange-700"><i className="fas fa-tag"></i></button>
+                                        <button onClick={() => openAttributeTable(layer)} title="Table d'attributs" className="text-blue-500 hover:text-blue-700"><i className="fas fa-table"></i></button>
+                                    </div>
                                 </div>
                             ))}
                             {layers.length === 0 && <div className="text-[10px] text-neutral-400 italic">Aucun fichier importé.</div>}

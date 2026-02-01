@@ -74,6 +74,8 @@ export interface MapComponentRef {
   flyToLocation: (lon: number, lat: number, zoom?: number) => void;
   getLayerFeatures: (layerId: string) => any[];
   highlightFeature: (id: string) => void;
+  getLayerAvailableFields: (layerId: string) => string[];
+  setLayerLabelField: (layerId: string, fieldName: string) => void;
 }
 
 type PopupContent = 
@@ -109,6 +111,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
   const pointerMoveListenerRef = useRef<any>(null);
   const currentMeasureUnitRef = useRef<string>('m');
   const activeMeasurementsRef = useRef<Array<{ feature: Feature, overlay: Overlay, type: 'Length' | 'Area' }>>([]);
+  const layerLabelFieldsRef = useRef<Record<string, string>>({});
 
   const manualStyleFunction = (feature: any) => {
     const geometry = feature.getGeometry();
@@ -127,9 +130,46 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     return new Style({ stroke: new Stroke({ color: '#22c55e', width: 2 }), text: textStyle });
   };
 
+  const kmlStyleFunction = (feature: any) => {
+      const layerId = feature.get('layerId');
+      const labelField = layerLabelFieldsRef.current[layerId];
+      let labelText = '';
+      if (labelField) {
+          const val = feature.get(labelField);
+          if (val !== undefined && val !== null) labelText = String(val);
+      } else if (feature.get('label')) {
+          labelText = feature.get('label');
+      } else if (feature.get('name')) {
+          labelText = feature.get('name');
+      }
+
+      const textStyle = new Text({
+          text: labelText,
+          font: 'bold 11px Roboto, sans-serif',
+          fill: new Fill({ color: '#ffffff' }),
+          stroke: new Stroke({ color: '#f59e0b', width: 3 }),
+          offsetY: -12,
+          overflow: true
+      });
+
+      const geometry = feature.getGeometry();
+      const type = geometry.getType();
+
+      return new Style({
+          stroke: new Stroke({ color: '#f59e0b', width: 2.5 }),
+          fill: new Fill({ color: 'rgba(245, 158, 11, 0.05)' }),
+          text: labelText ? textStyle : undefined,
+          image: type === 'Point' ? new CircleStyle({
+              radius: 6,
+              fill: new Fill({ color: '#f59e0b' }),
+              stroke: new Stroke({ color: '#fff', width: 2 })
+          }) : undefined
+      });
+  };
+
   const selectedStyleFunction = (feature: any) => {
       if (isDeleteModeRef.current) return new Style({ stroke: new Stroke({ color: '#ef4444', width: 4 }), fill: new Fill({ color: 'rgba(239, 68, 68, 0.3)' }), image: new CircleStyle({ radius: 7, fill: new Fill({ color: '#ef4444' }), stroke: new Stroke({ color: '#fff', width: 2 }) }) });
-      const baseStyles = manualStyleFunction(feature);
+      const baseStyles = feature.get('layerId') ? kmlStyleFunction(feature) : manualStyleFunction(feature);
       const styles = Array.isArray(baseStyles) ? baseStyles : [baseStyles];
       styles.forEach(s => { const stroke = s.getStroke(); if (stroke) { stroke.setColor('#3b82f6'); stroke.setWidth(3); } });
       return styles;
@@ -205,10 +245,21 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
             if (geom instanceof Point) { const c = toLonLat(geom.getCoordinates()); rest.Lon = c[0].toFixed(6); rest.Lat = c[1].toFixed(6); }
             else if (geom instanceof Polygon) { rest.Area = getArea(geom).toFixed(2) + " m²"; }
             else if (geom instanceof LineString) { rest.Length = getLength(geom).toFixed(2) + " m"; }
-            rest._featureId = f.getId() || `${f.get('type')}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            rest._featureId = f.getId() || `${f.get('type') || 'feat'}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             if (!f.getId()) f.setId(rest._featureId);
             return rest;
         });
+    },
+    getLayerAvailableFields: (layerId) => {
+        const features = kmlSourceRef.current.getFeatures().filter(f => f.get('layerId') === layerId);
+        if (features.length === 0) return [];
+        const props = features[0].getProperties();
+        const blacklist = ['geometry', 'layerId', '_featureId'];
+        return Object.keys(props).filter(k => !blacklist.includes(k));
+    },
+    setLayerLabelField: (layerId, fieldName) => {
+        layerLabelFieldsRef.current[layerId] = fieldName;
+        kmlSourceRef.current.changed();
     },
     highlightFeature: (id) => {
         const feature = sourceRef.current.getFeatureById(id) || pointsSourceRef.current.getFeatureById(id) || kmlSourceRef.current.getFeatureById(id);
@@ -351,7 +402,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       });
       mapRef.current?.addInteraction(draw); drawInteractionRef.current = draw;
     },
-    clearAll: () => { sourceRef.current.clear(); kmlSourceRef.current.clear(); pointsSourceRef.current.clear(); measureSourceRef.current.clear(); activeMeasurementsRef.current = []; overlayRef.current?.setPosition(undefined); notifyManualFeatures(); },
+    clearAll: () => { sourceRef.current.clear(); kmlSourceRef.current.clear(); pointsSourceRef.current.clear(); measureSourceRef.current.clear(); activeMeasurementsRef.current = []; overlayRef.current?.setPosition(undefined); notifyManualFeatures(); layerLabelFieldsRef.current = {}; },
     undo: () => { const f = sourceRef.current.getFeatures(); if (f.length > 0) sourceRef.current.removeFeature(f[f.length-1]); notifyManualFeatures(); },
     deleteSelectedFeature: () => { const s = selectInteractionRef.current?.getFeatures(); if (s) { s.forEach(f => { if (sourceRef.current.hasFeature(f)) sourceRef.current.removeFeature(f); if (pointsSourceRef.current.hasFeature(f)) pointsSourceRef.current.removeFeature(f); }); s.clear(); notifyManualFeatures(); } },
     getMapCanvas: async (targetScale, layerId) => {
@@ -397,7 +448,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     selectInteractionRef.current = select;
     const modify = new Modify({ source: sourceRef.current }); modify.setActive(false); modifyInteractionRef.current = modify;
     const snap = new Snap({ source: sourceRef.current }); snap.setActive(false); snapInteractionRef.current = snap;
-    const map = new Map({ target: mapElement.current!, layers: [ baseLayer, new VectorLayer({ source: kmlSourceRef.current, style: new Style({ stroke: new Stroke({ color: '#f59e0b', width: 2.5 }), fill: new Fill({ color: 'rgba(245, 158, 11, 0.05)' }) }) }), new VectorLayer({ source: pointsSourceRef.current, style: pointStyle }), new VectorLayer({ source: measureSourceRef.current, style: measureStyle }), new VectorLayer({ source: sourceRef.current, style: manualStyleFunction }) ], view: new View({ center: fromLonLat([-7.5898, 33.5731]), zoom: 6, maxZoom: 22 }), controls: [new Zoom(), new ScaleLine()], overlays: [overlay] });
+    const map = new Map({ target: mapElement.current!, layers: [ baseLayer, new VectorLayer({ source: kmlSourceRef.current, style: kmlStyleFunction }), new VectorLayer({ source: pointsSourceRef.current, style: pointStyle }), new VectorLayer({ source: measureSourceRef.current, style: measureStyle }), new VectorLayer({ source: sourceRef.current, style: manualStyleFunction }) ], view: new View({ center: fromLonLat([-7.5898, 33.5731]), zoom: 6, maxZoom: 22 }), controls: [new Zoom(), new ScaleLine()], overlays: [overlay] });
     map.addInteraction(select); map.addInteraction(modify); map.addInteraction(snap);
     map.on('pointermove', (e) => { if (e.dragging) return; const c = toLonLat(e.coordinate); if (onMouseMove) onMouseMove(`${c[0]>=0?'E':'W'}${Math.abs(c[0]).toFixed(4)}`, `${c[1]>=0?'N':'S'}${Math.abs(c[1]).toFixed(4)}`); mapElement.current!.style.cursor = map.hasFeatureAtPixel(e.pixel) ? 'pointer' : ''; });
     map.on('click', (e) => { if (drawInteractionRef.current) return; const f = map.forEachFeatureAtPixel(e.pixel, (ft) => ft, { layerFilter: (l) => l.getSource() === pointsSourceRef.current }); if (f instanceof Feature && f.getGeometry() instanceof Point) showPointPopup(f, (f.getGeometry() as Point).getCoordinates()); });
