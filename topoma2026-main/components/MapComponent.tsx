@@ -155,26 +155,28 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
           labelText = feature.get('name');
       }
 
+      // Professional Black Label with White Halo
       const textStyle = new Text({
           text: labelText,
-          font: 'bold 11px Roboto, sans-serif',
-          fill: new Fill({ color: '#ffffff' }),
-          stroke: new Stroke({ color: '#f59e0b', width: 3 }),
-          offsetY: -12,
-          overflow: true
+          font: 'bold 12px Roboto, sans-serif',
+          fill: new Fill({ color: '#000000' }), // Professional Black
+          stroke: new Stroke({ color: '#ffffff', width: 4 }), // Thick White Halo
+          offsetY: -15,
+          overflow: true,
+          placement: feature.getGeometry()?.getType() === 'LineString' ? 'line' : 'point'
       });
 
       const geometry = feature.getGeometry();
       const type = geometry.getType();
 
       return new Style({
-          stroke: new Stroke({ color: '#f59e0b', width: 2.5 }),
-          fill: new Fill({ color: 'rgba(245, 158, 11, 0.05)' }),
+          stroke: new Stroke({ color: '#91E400', width: 3 }), // Lime Green Border
+          fill: new Fill({ color: 'rgba(0, 255, 64, 0.15)' }), // Phosphorescent Green Fill (Transparent)
           text: labelText ? textStyle : undefined,
           image: type === 'Point' ? new CircleStyle({
-              radius: 6,
-              fill: new Fill({ color: '#f59e0b' }),
-              stroke: new Stroke({ color: '#fff', width: 2 })
+              radius: 7,
+              fill: new Fill({ color: '#00FF40' }), // Phosphorescent Green
+              stroke: new Stroke({ color: '#91E400', width: 2 })
           }) : undefined
       });
   };
@@ -547,16 +549,14 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
           <div ref={popupRef} className="absolute bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] p-0 z-50 min-w-[210px] border border-neutral-100 overflow-visible transform -translate-x-1/2">
              {popupContent && popupContent.type === 'POINT' && (
                  <div className="flex flex-col text-[12px] custom-modal-font">
-                     {/* Header */}
                      <div className="px-3 py-2 border-b flex justify-between items-center bg-white rounded-t-xl">
                          <span className="font-bold text-neutral-800 text-sm">{popupContent.label}</span>
-                         <button onClick={() => overlayRef.current?.setPosition(undefined)} className="text-neutral-400 hover:text-red-500 transition-colors">
+                         <button onClick={() => overlayRef.current?.setPosition(undefined)} className="text-red-600 hover:text-red-800 transition-colors">
                             <i className="fas fa-times text-sm"></i>
                          </button>
                      </div>
                      
                      <div className="p-3 space-y-3 bg-white">
-                         {/* Projected Group */}
                          <div className="space-y-0.5">
                              <div className="text-blue-600 font-bold text-[10px] mb-1">{popupContent.zoneLabel}</div>
                              <div className="grid grid-cols-[16px_1fr] gap-x-1 text-neutral-700 leading-tight">
@@ -569,7 +569,6 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
                              </div>
                          </div>
 
-                         {/* Geographic Group */}
                          <div className="space-y-0.5 pt-2 border-t border-neutral-50">
                              <div className="text-neutral-400 font-bold text-[10px] mb-1 uppercase tracking-wider">WGS 84</div>
                              <div className="grid grid-cols-[16px_1fr] gap-x-1 text-neutral-600 leading-tight">
@@ -581,7 +580,6 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
                          </div>
                      </div>
 
-                     {/* Footer Dropdown */}
                      <div className="relative border-t border-neutral-50">
                          <button 
                             onClick={() => setShowDownloadMenu(!showDownloadMenu)}

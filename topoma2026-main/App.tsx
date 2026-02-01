@@ -118,14 +118,11 @@ const App: React.FC = () => {
   const [toolboxOpen, setToolboxOpen] = useState(false); 
   const [showGoToPanel, setShowGoToPanel] = useState(false); 
   const [showExcelPanel, setShowExcelPanel] = useState(false); 
-  const [showExcelHelp, setShowExcelHelp] = useState(false); 
   
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   
-  const [showContactInfo, setShowContactInfo] = useState(false);
-
   const [selectedZone, setSelectedZone] = useState<string>('EPSG:26191'); 
   const [selectedExcelFile, setSelectedExcelFile] = useState<File | null>(null);
   
@@ -133,13 +130,11 @@ const App: React.FC = () => {
   const [manualFeatures, setManualFeatures] = useState<ManualFeatureInfo[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string>('manual');
 
-  // Attribute Table State
   const [showAttrTable, setShowAttrTable] = useState(false);
   const [attrTableData, setAttrTableData] = useState<any[]>([]);
   const [attrTableTitle, setAttrTableTitle] = useState("");
   const [selectedAttrFeatureId, setSelectedAttrFeatureId] = useState<string | null>(null);
 
-  // Label Management
   const [labelPicker, setLabelPicker] = useState<{ layerId: string, fields: string[] } | null>(null);
 
   const [locationName, setLocationName] = useState<string>("location");
@@ -404,7 +399,7 @@ const App: React.FC = () => {
     setExportData(null); setExportResult(null); setStep('IDLE'); setActiveTool(null);
     setZipBlob(null); setSelectedExcelFile(null); setLayers([]); setManualFeatures([]);
     setSelectedLayerId('manual'); setPointCounter(1); setLocationName("location");
-    setSearchQuery(""); setSearchResults([]); setShowContactInfo(false);
+    setSearchQuery(""); setSearchResults([]); 
     setShowAttrTable(false); setAttrTableData([]); setLabelPicker(null);
   };
 
@@ -418,7 +413,7 @@ const App: React.FC = () => {
       <input type="file" accept=".xlsx, .xls" className="hidden" ref={excelInputRef} onChange={(e) => handleFileUpload(e, 'XLS')} />
 
       {/* --- TOOLBAR --- */}
-      <div className="bg-neutral-100 border-b border-neutral-300 p-1 flex items-center gap-1 shadow-sm shrink-0 h-10">
+      <div className="bg-neutral-100 border-b border-neutral-300 p-1 flex items-center gap-1 shadow-sm shrink-0 h-10 z-50">
           <div className="flex items-center px-2 mr-1 border-r border-neutral-300 gap-1.5">
              <span className="text-xs font-black text-neutral-700 hidden sm:block">topoma</span>
           </div>
@@ -450,7 +445,7 @@ const App: React.FC = () => {
                   <button onClick={() => { setShowGoToPanel(!showGoToPanel); setShowExcelPanel(false); setShowSearchPanel(false); }} className={`h-8 px-2 flex items-center justify-center rounded border transition-colors ${showGoToPanel ? 'bg-neutral-200 border-neutral-400' : 'hover:bg-neutral-200 border-transparent hover:border-neutral-300'}`}><i className="fas fa-map-marker-alt text-red-600 mr-1"></i> <span className="text-xs font-bold text-neutral-700">Go To XY</span></button>
                   {showGoToPanel && (
                       <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-neutral-300 p-3 w-64 z-50">
-                          <div className="flex justify-between items-center mb-2 border-b border-neutral-100 pb-1"><span className="text-xs font-bold text-neutral-700">Go To XY</span><button onClick={() => setShowGoToPanel(false)} className="text-neutral-400 hover:text-neutral-600"><i className="fas fa-times"></i></button></div>
+                          <div className="flex justify-between items-center mb-2 border-b border-neutral-100 pb-1"><span className="text-xs font-bold text-neutral-700">Go To XY</span><button onClick={() => setShowGoToPanel(false)} className="text-red-500 hover:text-red-700 transition-colors"><i className="fas fa-times"></i></button></div>
                           <div className="space-y-2">
                               <div><label className="block text-[10px] text-neutral-500 mb-0.5">Projection</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border border-neutral-300 rounded p-1 bg-neutral-50 focus:outline-none focus:border-blue-400">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div>
                               <div className="grid grid-cols-2 gap-2"><div><label className="block text-[10px] text-neutral-500 mb-0.5">X</label><input type="text" value={manualX} onChange={(e) => setManualX(e.target.value)} className="w-full text-xs border border-neutral-300 rounded p-1" /></div><div><label className="block text-[10px] text-neutral-500 mb-0.5">Y</label><input type="text" value={manualY} onChange={(e) => setManualY(e.target.value)} className="w-full text-xs border border-neutral-300 rounded p-1" /></div></div>
@@ -484,42 +479,48 @@ const App: React.FC = () => {
       </div>
 
       {/* --- WORKSPACE --- */}
-      <div className="flex-grow flex relative overflow-hidden">
+      <div className="flex-grow flex relative overflow-hidden bg-white">
           
           {/* LEFT: Export Tools */}
-          <div className={`${toolboxOpen ? 'w-80 translate-x-0' : 'w-0 -translate-x-full opacity-0'} transition-all duration-300 bg-white border-r border-neutral-300 flex flex-col shrink-0 overflow-hidden absolute left-0 top-0 h-full z-20 shadow-lg md:shadow-none`}>
-               <div className="bg-neutral-100 p-2 border-b font-bold text-xs text-green-800 flex justify-between items-center"><span><i className="fas fa-file-image mr-1"></i> Exporter GeoTIFF</span><button onClick={() => setToolboxOpen(false)} className="text-neutral-500"><i className="fas fa-times"></i></button></div>
-              <div className="flex-grow overflow-y-auto p-3 bg-neutral-50">
-                   <div className="border bg-white mb-2 shadow-sm rounded-sm">
-                       <div className="bg-neutral-200 px-2 py-1.5 text-xs font-bold border-b flex items-center gap-2">Extraction Raster</div>
-                       <div className="p-3 text-xs space-y-4">
-                           <div>
-                               <label className="block text-neutral-600 mb-1.5 font-medium">Source:</label>
-                               <select value={selectedLayerId} onChange={(e) => handleLayerSelect(e.target.value)} className="w-full border p-1.5 rounded bg-white text-xs">
-                                  <option value="manual"> -- Tout (Manuel) -- </option>
-                                  {manualFeatures.length > 0 && (<optgroup label="Dessins">{manualFeatures.map(feat => (<option key={feat.id} value={feat.id}>{feat.label}</option>))}</optgroup>)}
-                                  {layers.length > 0 && (<optgroup label="Fichiers Importés">{layers.map(layer => (<option key={layer.id} value={layer.id}>{layer.type}: {layer.name}</option>))}</optgroup>)}
-                               </select>
-                           </div>
-                           {(step === 'SELECTED' || (step === 'IDLE' && selectedLayerId !== 'manual')) && exportData && (<div className="bg-blue-50 border-blue-200 border rounded p-2 text-[11px] space-y-1"><div className="font-bold flex items-center gap-1 border-b pb-1 mb-1">Info Élément</div>{exportData.area && (<div className="flex justify-between"><span>Area:</span><span className="font-bold">{exportData.area}</span></div>)}{exportData.perimeter && (<div className="flex justify-between"><span>Perim:</span><span>{exportData.perimeter}</span></div>)}</div>)}
-                           <div><label className="block text-neutral-600 mb-1.5 font-medium">Échelle:</label><select value={selectedScale} onChange={(e) => handleScaleChange(Number(e.target.value))} className="w-full border p-1.5 rounded bg-white">{EXPORT_SCALES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>
-                           <div className="border border-neutral-200 p-3 bg-neutral-50 min-h-[160px] flex flex-col items-center justify-center text-center rounded">
-                               {step === 'IDLE' && <span className="text-neutral-400 italic">Sélectionnez une zone...</span>}
-                               {(step === 'SELECTED' || (selectedLayerId !== 'manual' && exportData) || (selectedLayerId === 'manual' && manualFeatures.length > 0)) && (<button onClick={() => startClipping()} className="bg-blue-600 text-white px-6 py-2 rounded font-bold">GÉNÉRER</button>)}
-                               {step === 'PROCESSING' && (<div className="flex flex-col items-center"><div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-2"></div><span className="text-blue-700 font-bold text-xs">Traitement... {countdown}%</span></div>)}
-                               {step === 'DONE' && exportResult && (<div className="flex flex-col items-center w-full"><div className="text-green-600 font-bold mb-2">Terminé !</div><div className="w-full bg-white border rounded mb-3 text-[10px] text-left overflow-hidden"><div className="grid grid-cols-[60px_1fr] border-b"><div className="bg-neutral-100 p-1 font-bold">Nom</div><div className="p-1 truncate">{exportResult.name}</div></div><div className="grid grid-cols-[60px_1fr] border-b"><div className="bg-neutral-100 p-1 font-bold">Taille</div><div className="p-1 font-bold text-blue-600">{exportResult.size}</div></div></div><button onClick={downloadFile} className="bg-green-600 text-white px-4 py-2 rounded font-bold w-full">Télécharger ZIP</button></div>)}
-                           </div>
-                       </div>
-                   </div>
-                   <div className="mt-6 text-center text-[11px] text-neutral-600">Jilit Mostafa | +212 668 09 02 85</div>
-              </div>
+          <div className={`${toolboxOpen ? 'w-80' : 'w-0 overflow-hidden'} transition-all duration-300 bg-white border-r border-neutral-300 flex flex-col shrink-0 relative z-20`}>
+               <div className="w-80 flex flex-col h-full">
+                  <div className="bg-neutral-100 p-2 border-b font-bold text-xs text-green-800 flex justify-between items-center shrink-0">
+                    <span><i className="fas fa-file-image mr-1"></i> Exporter GeoTIFF</span>
+                    <button onClick={() => setToolboxOpen(false)} className="text-red-600 hover:text-red-800 transition-colors"><i className="fas fa-times"></i></button>
+                  </div>
+                  <div className="flex-grow overflow-y-auto p-3 bg-neutral-50">
+                      <div className="border bg-white mb-2 shadow-sm rounded-sm">
+                          <div className="bg-neutral-200 px-2 py-1.5 text-xs font-bold border-b flex items-center gap-2">Extraction Raster</div>
+                          <div className="p-3 text-xs space-y-4">
+                              <div>
+                                  <label className="block text-neutral-600 mb-1.5 font-medium">Source:</label>
+                                  <select value={selectedLayerId} onChange={(e) => handleLayerSelect(e.target.value)} className="w-full border p-1.5 rounded bg-white text-xs">
+                                      <option value="manual"> -- Tout (Manuel) -- </option>
+                                      {manualFeatures.length > 0 && (<optgroup label="Dessins">{manualFeatures.map(feat => (<option key={feat.id} value={feat.id}>{feat.label}</option>))}</optgroup>)}
+                                      {layers.length > 0 && (<optgroup label="Fichiers Importés">{layers.map(layer => (<option key={layer.id} value={layer.id}>{layer.type}: {layer.name}</option>))}</optgroup>)}
+                                  </select>
+                              </div>
+                              {(step === 'SELECTED' || (step === 'IDLE' && selectedLayerId !== 'manual')) && exportData && (<div className="bg-blue-50 border-blue-200 border rounded p-2 text-[11px] space-y-1"><div className="font-bold flex items-center gap-1 border-b pb-1 mb-1">Info Élément</div>{exportData.area && (<div className="flex justify-between"><span>Area:</span><span className="font-bold">{exportData.area}</span></div>)}{exportData.perimeter && (<div className="flex justify-between"><span>Perim:</span><span>{exportData.perimeter}</span></div>)}</div>)}
+                              <div><label className="block text-neutral-600 mb-1.5 font-medium">Échelle:</label><select value={selectedScale} onChange={(e) => handleScaleChange(Number(e.target.value))} className="w-full border p-1.5 rounded bg-white">{EXPORT_SCALES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>
+                              <div className="border border-neutral-200 p-3 bg-neutral-50 min-h-[160px] flex flex-col items-center justify-center text-center rounded">
+                                  {step === 'IDLE' && <span className="text-neutral-400 italic">Sélectionnez une zone...</span>}
+                                  {(step === 'SELECTED' || (selectedLayerId !== 'manual' && exportData) || (selectedLayerId === 'manual' && manualFeatures.length > 0)) && (<button onClick={() => startClipping()} className="bg-blue-600 text-white px-6 py-2 rounded font-bold">GÉNÉRER</button>)}
+                                  {step === 'PROCESSING' && (<div className="flex flex-col items-center"><div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-2"></div><span className="text-blue-700 font-bold text-xs">Traitement... {countdown}%</span></div>)}
+                                  {step === 'DONE' && exportResult && (<div className="flex flex-col items-center w-full"><div className="text-green-600 font-bold mb-2">Terminé !</div><div className="w-full bg-white border rounded mb-3 text-[10px] text-left overflow-hidden"><div className="grid grid-cols-[60px_1fr] border-b"><div className="bg-neutral-100 p-1 font-bold">Nom</div><div className="p-1 truncate">{exportResult.name}</div></div><div className="grid grid-cols-[60px_1fr] border-b"><div className="bg-neutral-100 p-1 font-bold">Taille</div><div className="p-1 font-bold text-blue-600">{exportResult.size}</div></div></div><button onClick={downloadFile} className="bg-green-600 text-white px-4 py-2 rounded font-bold w-full">Télécharger ZIP</button></div>)}
+                              </div>
+                          </div>
+                      </div>
+                      <div className="mt-6 text-center text-[11px] text-neutral-600">Jilit Mostafa | +212 668 09 02 85</div>
+                  </div>
+               </div>
           </div>
 
           {/* CENTER: MAP */}
-          <div className="flex-grow relative bg-white">
-              <div className="absolute top-2 right-2 z-30 flex flex-col items-end pointer-events-none gap-2">
+          <div className="flex-grow relative bg-white z-10">
+              {/* Drawing Tools Container: Shifts left when TOC is open */}
+              <div className={`absolute top-2 transition-all duration-300 z-30 flex flex-col items-end pointer-events-none gap-2 ${tocOpen ? 'right-[calc(18rem+0.5rem)]' : 'right-2'}`}>
                   <button onClick={() => { setShowExcelPanel(!showExcelPanel); setShowGoToPanel(false); }} className="pointer-events-auto w-10 h-10 bg-white rounded-lg shadow-md border hover:bg-neutral-50 flex items-center justify-center text-green-600"><i className="fas fa-file-excel text-lg"></i></button>
-                  {showExcelPanel && (<div className="pointer-events-auto mt-2 bg-white rounded-lg shadow-xl border p-3 w-64 absolute top-full right-0 z-50"><div className="flex justify-between items-center mb-2 border-b"><span className="text-xs font-bold">Import Excel XY</span><button onClick={() => setShowExcelPanel(false)}><i className="fas fa-times"></i></button></div><div className="space-y-3"><div><label className="block text-[10px] mb-0.5">Projection</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border rounded p-1">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div><div className="border border-dashed rounded p-2 text-center"><button onClick={() => handleFileClick(excelInputRef)} className="text-xs text-blue-600 font-medium underline">Choisir un fichier</button><div className="text-[10px] truncate">{selectedExcelFile ? selectedExcelFile.name : "Aucun fichier"}</div></div><button onClick={processExcelFile} disabled={!selectedExcelFile} className={`w-full text-white text-xs py-1.5 rounded ${selectedExcelFile ? 'bg-green-600' : 'bg-neutral-300'}`}>Charger les points</button></div></div>)}
+                  {showExcelPanel && (<div className="pointer-events-auto mt-2 bg-white rounded-lg shadow-xl border p-3 w-64 absolute top-full right-0 z-50"><div className="flex justify-between items-center mb-2 border-b"><span className="text-xs font-bold">Import Excel XY</span><button onClick={() => setShowExcelPanel(false)} className="text-red-600 hover:text-red-800 transition-colors"><i className="fas fa-times"></i></button></div><div className="space-y-3"><div><label className="block text-[10px] mb-0.5">Projection</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border rounded p-1">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div><div className="border border-dashed rounded p-2 text-center"><button onClick={() => handleFileClick(excelInputRef)} className="text-xs text-blue-600 font-medium underline">Choisir un fichier</button><div className="text-[10px] truncate">{selectedExcelFile ? selectedExcelFile.name : "Aucun fichier"}</div></div><button onClick={processExcelFile} disabled={!selectedExcelFile} className={`w-full text-white text-xs py-1.5 rounded ${selectedExcelFile ? 'bg-green-600' : 'bg-neutral-300'}`}>Charger les points</button></div></div>)}
                   <button onClick={() => toggleTool('Edit')} className={`pointer-events-auto w-10 h-10 rounded-lg shadow-md border flex items-center justify-center ${activeTool === 'Edit' ? 'bg-orange-500 text-white' : 'bg-white text-neutral-700'}`}><i className="fas fa-pen-to-square text-lg"></i></button>
                   <button onClick={() => mapComponentRef.current?.undo()} className="pointer-events-auto w-10 h-10 rounded-lg shadow-md border flex items-center justify-center bg-white text-neutral-700"><i className="fas fa-rotate-left text-lg"></i></button>
                   <button onClick={() => toggleTool('Rectangle')} className={`pointer-events-auto w-10 h-10 rounded-lg shadow-md border flex items-center justify-center ${activeTool === 'Rectangle' ? 'bg-blue-600 text-white' : 'bg-white'}`}><i className="far fa-square text-lg"></i></button>
@@ -553,7 +554,7 @@ const App: React.FC = () => {
                               <i className="fas fa-table text-blue-600"></i> Table d'attributs: {attrTableTitle}
                           </span>
                           <div className="flex gap-2">
-                             <button onClick={() => setShowAttrTable(false)} className="text-neutral-500 hover:text-red-500"><i className="fas fa-times"></i></button>
+                             <button onClick={() => setShowAttrTable(false)} className="text-red-600 hover:text-red-800 transition-colors"><i className="fas fa-times"></i></button>
                           </div>
                       </div>
                       <div className="flex-grow overflow-auto">
@@ -573,8 +574,8 @@ const App: React.FC = () => {
                                             onClick={() => handleRowClick(row)}
                                             className={`cursor-pointer transition-colors ${selectedAttrFeatureId === row._featureId ? 'bg-blue-100 hover:bg-blue-200' : 'hover:bg-blue-50 odd:bg-white even:bg-neutral-50/50'}`}
                                           >
-                                              {Object.entries(row).filter(([k]) => k !== '_featureId').map(([key, val], vIdx) => (
-                                                  <td key={vIdx} className="px-3 py-1.5 border-b border-r truncate max-w-[200px]" title={String(val)}>{String(val)}</td>
+                                              {Object.entries(row).filter(([k]) => k !== '_featureId').map(([key, vIdx], idx2) => (
+                                                  <td key={idx2} className="px-3 py-1.5 border-b border-r truncate max-w-[200px]" title={String(vIdx)}>{String(vIdx)}</td>
                                               ))}
                                           </tr>
                                       ))}
@@ -593,7 +594,7 @@ const App: React.FC = () => {
                       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
                           <div className="bg-neutral-100 p-3 border-b flex justify-between items-center">
                               <span className="text-sm font-bold">Sélectionner le champ d'étiquette</span>
-                              <button onClick={() => setLabelPicker(null)} className="text-neutral-500 hover:text-red-500"><i className="fas fa-times"></i></button>
+                              <button onClick={() => setLabelPicker(null)} className="text-red-600 hover:text-red-800 transition-colors"><i className="fas fa-times"></i></button>
                           </div>
                           <div className="p-4 space-y-2 max-h-[60vh] overflow-y-auto">
                               <button 
@@ -617,55 +618,57 @@ const App: React.FC = () => {
               )}
           </div>
 
-          {/* RIGHT: TOC (Couches) */}
-          <div className={`${tocOpen ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300 bg-white border-l border-neutral-300 flex flex-col w-72 md:w-72 fixed md:static right-0 top-10 md:top-0 h-[calc(100vh-40px)] md:h-full z-[40] shadow-2xl md:shadow-none order-last overflow-hidden`}>
-              <div className="bg-neutral-100 p-2 border-b font-bold text-xs text-neutral-700 flex justify-between items-center shrink-0">
-                  <span className="flex items-center gap-1.5"><i className="fas fa-layer-group text-blue-600"></i> Couches</span>
-                  <div className="flex gap-2">
-                      <div className="flex gap-1">
-                        <button onClick={() => handleFileClick(kmlInputRef)} title="KML" className="text-blue-500 hover:text-blue-700"><i className="fas fa-globe"></i></button>
-                        <button onClick={() => handleFileClick(shpInputRef)} title="SHP" className="text-green-500 hover:text-green-700"><i className="fas fa-shapes"></i></button>
-                        <button onClick={() => handleFileClick(geojsonInputRef)} title="JSON" className="text-teal-500 hover:text-teal-700"><i className="fas fa-file-code"></i></button>
-                        <button onClick={() => handleFileClick(dxfInputRef)} title="DXF" className="text-purple-500 hover:text-purple-700"><i className="fas fa-pencil-ruler"></i></button>
-                      </div>
-                      <button onClick={() => setTocOpen(false)} className="md:hidden text-neutral-400"><i className="fas fa-times"></i></button>
-                  </div>
-              </div>
-              <div className="flex-grow overflow-y-auto p-2">
-                  <div className="text-xs select-none space-y-4">
-                      <div>
-                        <div className="flex items-center gap-1 mb-1.5 font-bold text-neutral-800"><i className="fas fa-draw-polygon text-blue-500"></i> Dessins Manuels</div>
-                        <div className="ml-4 border-l border-neutral-200 pl-2">
-                            <div className="flex items-center justify-between py-1 group">
-                                <span className={`cursor-pointer truncate ${selectedLayerId === 'manual' ? 'font-bold text-blue-700 underline' : 'hover:text-blue-600'}`} onClick={() => handleLayerSelect('manual')}>Tous les dessins</span>
-                                <button onClick={() => openAttributeTable('manual')} title="Table d'attributs" className="text-blue-500 hover:scale-110"><i className="fas fa-table"></i></button>
-                            </div>
+          {/* RIGHT: TOC (Couches - Overlay Panel) */}
+          <div className={`${tocOpen ? 'w-72 translate-x-0' : 'w-0 translate-x-full overflow-hidden'} transition-all duration-300 bg-white border-l border-neutral-300 flex flex-col absolute right-0 top-0 h-full z-40 shadow-2xl shrink-0`}>
+              <div className="w-72 flex flex-col h-full">
+                <div className="bg-neutral-100 p-2 border-b font-bold text-xs text-neutral-700 flex justify-between items-center shrink-0">
+                    <span className="flex items-center gap-1.5"><i className="fas fa-layer-group text-blue-600"></i> Couches</span>
+                    <div className="flex gap-2">
+                        <div className="flex gap-1">
+                          <button onClick={() => handleFileClick(kmlInputRef)} title="KML" className="text-blue-500 hover:text-blue-700"><i className="fas fa-globe"></i></button>
+                          <button onClick={() => handleFileClick(shpInputRef)} title="SHP" className="text-green-500 hover:text-green-700"><i className="fas fa-shapes"></i></button>
+                          <button onClick={() => handleFileClick(geojsonInputRef)} title="JSON" className="text-teal-500 hover:text-teal-700"><i className="fas fa-file-code"></i></button>
+                          <button onClick={() => handleFileClick(dxfInputRef)} title="DXF" className="text-purple-500 hover:text-purple-700"><i className="fas fa-pencil-ruler"></i></button>
                         </div>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1 mb-1.5 font-bold text-neutral-800"><i className="fas fa-file-import text-yellow-600"></i> Fichiers Importés</div>
-                        <div className="ml-4 border-l border-neutral-200 pl-2 space-y-2">
-                            {layers.map((layer) => (
-                                <div key={layer.id} className={`flex items-center justify-between py-1 group border-b border-neutral-50 last:border-0 ${selectedLayerId === layer.id ? 'bg-blue-50/50 -ml-2 pl-2 rounded-l' : ''}`}>
-                                    <span className={`truncate cursor-pointer flex-grow ${selectedLayerId === layer.id ? 'font-bold text-blue-700' : 'text-neutral-600 hover:text-blue-600 transition-colors'}`} onClick={() => handleLayerSelect(layer.id)} title={layer.name}>
-                                        {layer.name}
-                                    </span>
-                                    <div className="flex gap-2.5 shrink-0 ml-2">
-                                        <button onClick={() => openLabelPicker(layer)} title="Étiquettes" className="text-orange-500 hover:text-orange-700 transition-transform hover:scale-110"><i className="fas fa-tag"></i></button>
-                                        <button onClick={() => openAttributeTable(layer)} title="Données" className="text-blue-500 hover:text-blue-700 transition-transform hover:scale-110"><i className="fas fa-table"></i></button>
-                                    </div>
-                                </div>
-                            ))}
-                            {layers.length === 0 && <div className="text-[10px] text-neutral-400 italic py-2">Aucun fichier chargé.</div>}
+                        <button onClick={() => setTocOpen(false)} className="text-red-600 hover:text-red-800 transition-colors"><i className="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div className="flex-grow overflow-y-auto p-2">
+                    <div className="text-xs select-none space-y-4">
+                        <div>
+                          <div className="flex items-center gap-1 mb-1.5 font-bold text-neutral-800"><i className="fas fa-draw-polygon text-blue-500"></i> Dessins Manuels</div>
+                          <div className="ml-4 border-l border-neutral-200 pl-2">
+                              <div className="flex items-center justify-between py-1 group">
+                                  <span className={`cursor-pointer truncate ${selectedLayerId === 'manual' ? 'font-bold text-blue-700 underline' : 'hover:text-blue-600'}`} onClick={() => handleLayerSelect('manual')}>Tous les dessins</span>
+                                  <button onClick={() => openAttributeTable('manual')} title="Table d'attributs" className="text-blue-500 hover:scale-110"><i className="fas fa-table"></i></button>
+                              </div>
+                          </div>
                         </div>
-                      </div>
-                  </div>
+                        <div>
+                          <div className="flex items-center gap-1 mb-1.5 font-bold text-neutral-800"><i className="fas fa-file-import text-yellow-600"></i> Fichiers Importés</div>
+                          <div className="ml-4 border-l border-neutral-200 pl-2 space-y-2">
+                              {layers.map((layer) => (
+                                  <div key={layer.id} className={`flex items-center justify-between py-1 group border-b border-neutral-50 last:border-0 ${selectedLayerId === layer.id ? 'bg-blue-50/50 -ml-2 pl-2 rounded-l' : ''}`}>
+                                      <span className={`truncate cursor-pointer flex-grow ${selectedLayerId === layer.id ? 'font-bold text-blue-700' : 'text-neutral-600 hover:text-blue-600 transition-colors'}`} onClick={() => handleLayerSelect(layer.id)} title={layer.name}>
+                                          {layer.name}
+                                      </span>
+                                      <div className="flex gap-2.5 shrink-0 ml-2">
+                                          <button onClick={() => openLabelPicker(layer)} title="Étiquettes" className="text-orange-500 hover:text-orange-700 transition-transform hover:scale-110"><i className="fas fa-tag"></i></button>
+                                          <button onClick={() => openAttributeTable(layer)} title="Données" className="text-blue-500 hover:text-blue-700 transition-transform hover:scale-110"><i className="fas fa-table"></i></button>
+                                      </div>
+                                  </div>
+                              ))}
+                              {layers.length === 0 && <div className="text-[10px] text-neutral-400 italic py-2">Aucun fichier chargé.</div>}
+                          </div>
+                        </div>
+                    </div>
+                </div>
               </div>
           </div>
       </div>
 
       {/* STATUS BAR */}
-      <div className="bg-neutral-200 border-t border-neutral-300 h-6 flex items-center px-2 text-[10px] text-neutral-600 justify-between shrink-0">
+      <div className="bg-neutral-200 border-t border-neutral-300 h-6 flex items-center px-2 text-[10px] text-neutral-600 justify-between shrink-0 z-50">
           <div className="flex gap-6 items-center">
               <div className="flex gap-3 font-mono text-neutral-700"><span className="w-20 text-right">{mouseCoords.y}</span><span className="w-20 text-left">{mouseCoords.x}</span></div>
               <div className="flex items-center gap-1 border-l border-neutral-300 pl-4"><span>Scale:</span><select value={selectedScale} onChange={(e) => handleScaleChange(Number(e.target.value))} className="bg-neutral-200 border-none focus:ring-0 p-0 text-[10px] h-4">{MAP_SCALES.map(s => <option key={s.value} value={s.value}>1:{s.value}</option>)}</select></div>
