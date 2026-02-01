@@ -491,12 +491,12 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     getMapCanvas: async (targetScale, layerId) => {
       if (!mapRef.current) return null;
       
-      // Identify target area
-      let expFeats = layerId === 'manual' ? sourceRef.current.getFeatures() : kmlSourceRef.current.getFeatures().filter(f => f.get('layerId') === layerId);
-      if (expFeats.length === 0 && layerId !== 'manual') { const f = sourceRef.current.getFeatureById(layerId!); if (f) expFeats = [f]; }
-      if (expFeats.length === 0) return null;
+      // Identify target features for clipping
+      let targetFeatures = layerId === 'manual' ? sourceRef.current.getFeatures() : kmlSourceRef.current.getFeatures().filter(f => f.get('layerId') === layerId);
+      if (targetFeatures.length === 0 && layerId !== 'manual') { const f = sourceRef.current.getFeatureById(layerId!); if (f) targetFeatures = [f]; }
+      if (targetFeatures.length === 0) return null;
 
-      const extent = expFeats.reduce((ext, f) => {
+      const extent = targetFeatures.reduce((ext, f) => {
           const e = f.getGeometry()!.getExtent();
           return [Math.min(ext[0], e[0]), Math.min(ext[1], e[1]), Math.max(ext[2], e[2]), Math.max(ext[3], e[3])];
       }, [Infinity, Infinity, -Infinity, -Infinity]);
@@ -526,16 +526,43 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
                   const ctx = captureCanvas.getContext('2d');
                   if (!ctx) return resolve(null);
 
-                  // Combine all layers found in the map
+                  // 1. Apply clipping path based on the polygon(s)
+                  ctx.beginPath();
+                  targetFeatures.forEach(feature => {
+                      const geom = feature.getGeometry();
+                      if (geom instanceof Polygon) {
+                          const coords = geom.getCoordinates()[0]; // Outer ring
+                          coords.forEach((c, idx) => {
+                              // Project geographic to canvas pixels
+                              const px = (c[0] - extent[0]) / res;
+                              const py = (extent[3] - c[1]) / res;
+                              if (idx === 0) ctx.moveTo(px, py);
+                              else ctx.lineTo(px, py);
+                          });
+                          ctx.closePath();
+                      } else if (geom instanceof MultiPolygon) {
+                          geom.getPolygons().forEach(poly => {
+                             const coords = poly.getCoordinates()[0];
+                             coords.forEach((c, idx) => {
+                                 const px = (c[0] - extent[0]) / res;
+                                 const py = (extent[3] - c[1]) / res;
+                                 if (idx === 0) ctx.moveTo(px, py);
+                                 else ctx.lineTo(px, py);
+                             });
+                             ctx.closePath();
+                          });
+                      }
+                  });
+                  ctx.clip(); // Apply the mask
+
+                  // 2. Combine all visible layers onto the clipped canvas
                   const layerCanvases = mapElement.current?.querySelectorAll('.ol-layer canvas');
                   layerCanvases?.forEach((canvasElement: any) => {
                       if (canvasElement.width > 0) {
                           const transform = canvasElement.style.transform;
-                          let matrix;
+                          let matrix = [1, 0, 0, 1, 0, 0];
                           if (transform.indexOf('matrix') !== -1) {
                               matrix = transform.split('(')[1].split(')')[0].split(',').map(Number);
-                          } else {
-                              matrix = [1, 0, 0, 1, 0, 0];
                           }
                           ctx.save();
                           ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
