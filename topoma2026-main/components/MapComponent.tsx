@@ -80,7 +80,7 @@ export interface MapComponentRef {
 
 type PopupContent = 
   | { type: 'AREA', m2: string, ha: string }
-  | { type: 'POINT', label: string, x: number, y: number, z: number | '...', lat: number, lon: number, zone: string }
+  | { type: 'POINT', label: string, x: number, y: number, z: number | '...', lat: number, lon: number, zone: string, zoneLabel: string }
   | null;
 
 const blueMarkerSvg = `<svg xmlns="http://www.w3.org/2000/svg" height="30" viewBox="0 0 24 24" width="30"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#2563eb" stroke="#ffffff" stroke-width="1"/></svg>`;
@@ -112,6 +112,18 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
   const currentMeasureUnitRef = useRef<string>('m');
   const activeMeasurementsRef = useRef<Array<{ feature: Feature, overlay: Overlay, type: 'Length' | 'Area' }>>([]);
   const layerLabelFieldsRef = useRef<Record<string, string>>({});
+
+  // Helper for human-readable zone name
+  const getZoneLabel = (code: string) => {
+      const zones: Record<string, string> = {
+          'EPSG:26191': 'Zone 1',
+          'EPSG:26192': 'Zone 2',
+          'EPSG:26194': 'Zone 3',
+          'EPSG:26195': 'Zone 4',
+          'EPSG:4326': 'WGS 84'
+      };
+      return zones[code] || code;
+  };
 
   const manualStyleFunction = (feature: any) => {
     const geometry = feature.getGeometry();
@@ -216,10 +228,51 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       const wgs84 = toLonLat(coordinate);
       const zoneCode = selectedZoneRef.current;
       const proj = projectToZone(wgs84[0], wgs84[1], zoneCode);
-      setPopupContent({ type: 'POINT', label: feature.get('label') || 'Pt', x: proj ? proj.x : 0, y: proj ? proj.y : 0, z: '...', lat: wgs84[1], lon: wgs84[0], zone: zoneCode });
+      const label = feature.get('label') || feature.get('name') || feature.get('Point') || 'Pt';
+      setPopupContent({ 
+          type: 'POINT', 
+          label, 
+          x: proj ? proj.x : 0, 
+          y: proj ? proj.y : 0, 
+          z: '...', 
+          lat: wgs84[1], 
+          lon: wgs84[0], 
+          zone: zoneCode,
+          zoneLabel: getZoneLabel(zoneCode)
+      });
       overlayRef.current?.setPosition(coordinate);
       const z = await fetchElevation(wgs84[1], wgs84[0]);
       setPopupContent(prev => prev && prev.type === 'POINT' ? { ...prev, z: z } : prev);
+  };
+
+  const downloadPointFile = (type: 'TXT' | 'DXF' | 'JSON' | 'KML') => {
+      if (!popupContent || popupContent.type !== 'POINT') return;
+      const { x, y, z, lat, lon, label, zoneLabel } = popupContent;
+      const elevation = typeof z === 'number' ? z : 0;
+      let content = "";
+      let fileName = `${label.replace(/\s+/g, '_')}`;
+      let mimeType = "text/plain";
+
+      if (type === 'TXT') {
+          content = createPointText(x, y, elevation, lat, lon, label, zoneLabel);
+          fileName += ".txt";
+      } else if (type === 'DXF') {
+          content = createPointDXF(x, y, elevation, label);
+          fileName += ".dxf";
+      } else if (type === 'JSON') {
+          content = JSON.stringify({ label, zone: zoneLabel, x, y, z: elevation, lat, lon }, null, 2);
+          fileName += ".json";
+          mimeType = "application/json";
+      } else if (type === 'KML') {
+          content = createPointKML(lat, lon, label);
+          fileName += ".kml";
+          mimeType = "application/vnd.google-earth.kml+xml";
+      }
+
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
+      URL.revokeObjectURL(url);
   };
 
   const calculateExtentAndNotify = (features: Feature[], sourceExtent: number[], featureId?: string) => {
@@ -272,6 +325,9 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
                 mapRef.current?.getView().fit(geom.getExtent(), { padding: [100, 100, 100, 100], duration: 800 });
                 selectInteractionRef.current?.getFeatures().clear();
                 selectInteractionRef.current?.getFeatures().push(feature);
+                if (geom instanceof Point) {
+                    showPointPopup(feature, geom.getCoordinates());
+                }
             }
         }
     },
@@ -279,7 +335,9 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
         navigator.geolocation.getCurrentPosition((pos) => {
             const coords = fromLonLat([pos.coords.longitude, pos.coords.latitude]);
             mapRef.current?.getView().animate({ center: coords, zoom: 18 });
-            pointsSourceRef.current.addFeature(new Feature({ geometry: new Point(coords), label: 'Moi' }));
+            const f = new Feature({ geometry: new Point(coords), label: 'Moi' });
+            pointsSourceRef.current.addFeature(f);
+            showPointPopup(f, coords);
         });
     },
     flyToLocation: (lon, lat, zoom) => mapRef.current?.getView().animate({ center: fromLonLat([lon, lat]), zoom: zoom || 16 }),
@@ -374,9 +432,12 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
         }
     },
     addManualPoint: (x, y, label) => {
-        const feature = new Feature({ geometry: new Point(fromLonLat([x, y])), label: label });
+        const coords = fromLonLat([x, y]);
+        const feature = new Feature({ geometry: new Point(coords), label: label });
         feature.setId(`pt_${Date.now()}`);
-        pointsSourceRef.current.addFeature(feature); mapRef.current?.getView().animate({ center: fromLonLat([x, y]), zoom: 16 });
+        pointsSourceRef.current.addFeature(feature); 
+        mapRef.current?.getView().animate({ center: coords, zoom: 16 });
+        showPointPopup(feature, coords);
     },
     setMeasureTool: (type, unit) => {
         if (drawInteractionRef.current) mapRef.current?.removeInteraction(drawInteractionRef.current);
@@ -447,6 +508,11 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
                 bounds: feature.getGeometry()!.getExtent(),
                 featureId: id
             });
+            if (feature.getGeometry() instanceof Point) {
+                showPointPopup(feature, (feature.getGeometry() as Point).getCoordinates());
+            } else {
+                overlayRef.current?.setPosition(undefined);
+            }
             if (isDeleteModeRef.current) {
                 e.selected.forEach(f => { if (sourceRef.current.hasFeature(f)) sourceRef.current.removeFeature(f); if (pointsSourceRef.current.hasFeature(f)) pointsSourceRef.current.removeFeature(f); if (kmlSourceRef.current.hasFeature(f)) kmlSourceRef.current.removeFeature(f); });
                 select.getFeatures().clear(); notifyManualFeatures();
@@ -459,7 +525,15 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     const map = new Map({ target: mapElement.current!, layers: [ baseLayer, new VectorLayer({ source: kmlSourceRef.current, style: kmlStyleFunction }), new VectorLayer({ source: pointsSourceRef.current, style: pointStyle }), new VectorLayer({ source: measureSourceRef.current, style: measureStyle }), new VectorLayer({ source: sourceRef.current, style: manualStyleFunction }) ], view: new View({ center: fromLonLat([-7.5898, 33.5731]), zoom: 6, maxZoom: 22 }), controls: [new Zoom(), new ScaleLine()], overlays: [overlay] });
     map.addInteraction(select); map.addInteraction(modify); map.addInteraction(snap);
     map.on('pointermove', (e) => { if (e.dragging) return; const c = toLonLat(e.coordinate); if (onMouseMove) onMouseMove(`${c[0]>=0?'E':'W'}${Math.abs(c[0]).toFixed(4)}`, `${c[1]>=0?'N':'S'}${Math.abs(c[1]).toFixed(4)}`); mapElement.current!.style.cursor = map.hasFeatureAtPixel(e.pixel) ? 'pointer' : ''; });
-    map.on('click', (e) => { if (drawInteractionRef.current) return; const f = map.forEachFeatureAtPixel(e.pixel, (ft) => ft, { layerFilter: (l) => l.getSource() === pointsSourceRef.current }); if (f instanceof Feature && f.getGeometry() instanceof Point) showPointPopup(f, (f.getGeometry() as Point).getCoordinates()); });
+    map.on('click', (e) => { 
+        if (drawInteractionRef.current) return; 
+        const f = map.forEachFeatureAtPixel(e.pixel, (ft) => ft); 
+        if (f instanceof Feature && f.getGeometry() instanceof Point) {
+            showPointPopup(f, (f.getGeometry() as Point).getCoordinates());
+        } else {
+            overlayRef.current?.setPosition(undefined);
+        }
+    });
     mapRef.current = map; return () => map.setTarget(undefined);
   }, []);
 
@@ -467,11 +541,70 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
 
   return (
       <div ref={mapElement} className="w-full h-full bg-slate-50 relative overflow-hidden">
-          <div ref={popupRef} className="absolute bg-white border rounded shadow-lg p-0 z-50 min-w-[150px]">
+          <div ref={popupRef} className="absolute bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-0 z-50 min-w-[280px] border border-neutral-100 overflow-hidden transform -translate-x-1/2">
              {popupContent && popupContent.type === 'POINT' && (
-                 <div className="flex flex-col text-[10px]">
-                     <div className="p-1.5 border-b font-bold bg-neutral-100 flex justify-between">{popupContent.label}<button onClick={() => overlayRef.current?.setPosition(undefined)}><i className="fas fa-times"></i></button></div>
-                     <div className="p-2 space-y-1"><div>X: {popupContent.x.toFixed(2)}</div><div>Y: {popupContent.y.toFixed(2)}</div><div>Z: {popupContent.z}</div></div>
+                 <div className="flex flex-col text-[13px] custom-modal-font">
+                     {/* Header */}
+                     <div className="px-4 py-3 border-b flex justify-between items-center bg-white">
+                         <span className="font-bold text-neutral-800 text-lg">{popupContent.label}</span>
+                         <button onClick={() => overlayRef.current?.setPosition(undefined)} className="text-neutral-400 hover:text-neutral-600 transition-colors">
+                            <i className="fas fa-times text-lg"></i>
+                         </button>
+                     </div>
+                     
+                     <div className="p-5 space-y-5 bg-white">
+                         {/* Projected Group */}
+                         <div className="space-y-1.5">
+                             <div className="text-blue-600 font-bold text-sm mb-1">{popupContent.zoneLabel}</div>
+                             <div className="grid grid-cols-[24px_1fr] gap-x-2 text-neutral-700">
+                                 <span className="font-bold text-neutral-400">X:</span>
+                                 <span className="font-mono">{popupContent.x.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</span>
+                                 <span className="font-bold text-neutral-400">Y:</span>
+                                 <span className="font-mono">{popupContent.y.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</span>
+                                 <span className="font-bold text-neutral-400">Z:</span>
+                                 <span className="font-bold text-emerald-600 font-mono">{popupContent.z} {popupContent.z !== '...' && 'm'}</span>
+                             </div>
+                         </div>
+
+                         {/* Geographic Group */}
+                         <div className="space-y-1.5 pt-2 border-t border-neutral-50">
+                             <div className="text-neutral-500 font-bold text-sm mb-1">WGS 84</div>
+                             <div className="grid grid-cols-[32px_1fr] gap-x-2 text-neutral-700">
+                                 <span className="text-neutral-400 font-medium">Lat:</span>
+                                 <span className="font-mono">{popupContent.lat.toFixed(7)}°</span>
+                                 <span className="text-neutral-400 font-medium">Lon:</span>
+                                 <span className="font-mono">{popupContent.lon.toFixed(7)}°</span>
+                             </div>
+                         </div>
+                     </div>
+
+                     {/* Footer Buttons */}
+                     <div className="bg-slate-50 p-3 grid grid-cols-4 gap-2 border-t border-neutral-100">
+                         <button onClick={() => downloadPointFile('TXT')} className="flex flex-col items-center gap-1 group">
+                             <div className="w-10 h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-neutral-600 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-200 transition-all shadow-sm">
+                                 <i className="far fa-file-lines text-lg"></i>
+                             </div>
+                             <span className="text-[10px] font-bold text-neutral-700 uppercase">TXT</span>
+                         </button>
+                         <button onClick={() => downloadPointFile('DXF')} className="flex flex-col items-center gap-1 group">
+                             <div className="w-10 h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-blue-600 group-hover:bg-blue-50 group-hover:border-blue-200 transition-all shadow-sm">
+                                 <i className="fas fa-file-code text-lg"></i>
+                             </div>
+                             <span className="text-[10px] font-bold text-neutral-700 uppercase">DXF</span>
+                         </button>
+                         <button onClick={() => downloadPointFile('JSON')} className="flex flex-col items-center gap-1 group">
+                             <div className="w-10 h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-50 group-hover:border-emerald-200 transition-all shadow-sm">
+                                 <i className="fas fa-code text-lg"></i>
+                             </div>
+                             <span className="text-[10px] font-bold text-neutral-700 uppercase">JSON</span>
+                         </button>
+                         <button onClick={() => downloadPointFile('KML')} className="flex flex-col items-center gap-1 group">
+                             <div className="w-10 h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-orange-500 group-hover:bg-orange-50 group-hover:border-orange-200 transition-all shadow-sm">
+                                 <i className="fas fa-globe text-lg"></i>
+                             </div>
+                             <span className="text-[10px] font-bold text-neutral-700 uppercase">KML</span>
+                         </button>
+                     </div>
                  </div>
              )}
           </div>
