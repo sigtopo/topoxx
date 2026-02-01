@@ -51,7 +51,7 @@ interface MapComponentProps {
   onMouseMove?: (x: string, y: string) => void;
   onManualFeaturesChange?: (features: ManualFeatureInfo[]) => void;
   selectedZone: string;
-  mapType: 'satellite' | 'hybrid';
+  basemapId: string;
 }
 
 export interface MapComponentRef {
@@ -85,7 +85,28 @@ type PopupContent =
 
 const blueMarkerSvg = `<svg xmlns="http://www.w3.org/2000/svg" height="30" viewBox="0 0 24 24" width="30"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#2563eb" stroke="#ffffff" stroke-width="1"/></svg>`;
 
-const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelectionComplete, onMouseMove, onManualFeaturesChange, selectedZone, mapType }, ref) => {
+const getBasemapSource = (id: string) => {
+    switch (id) {
+        case 'google_sat': return new XYZ({ url: 'https://mt{0-3}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', maxZoom: 22, crossOrigin: 'anonymous' });
+        case 'google_hybrid': return new XYZ({ url: 'https://mt{0-3}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', maxZoom: 22, crossOrigin: 'anonymous' });
+        case 'google_roads': return new XYZ({ url: 'https://mt{0-3}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', maxZoom: 22, crossOrigin: 'anonymous' });
+        case 'google_terrain': return new XYZ({ url: 'https://mt{0-3}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', maxZoom: 22, crossOrigin: 'anonymous' });
+        case 'google_hybrid_alt': return new XYZ({ url: 'https://mt{0-3}.google.com/vt/lyrs=h&x={x}&y={y}&z={z}', maxZoom: 22, crossOrigin: 'anonymous' });
+        case 'osm_standard': return new XYZ({ url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', maxZoom: 19, crossOrigin: 'anonymous' });
+        case 'osm_hot': return new XYZ({ url: 'https://{a-c}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', maxZoom: 19, crossOrigin: 'anonymous' });
+        case 'esri_sat': return new XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxZoom: 19, crossOrigin: 'anonymous' });
+        case 'esri_streets': return new XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', maxZoom: 19, crossOrigin: 'anonymous' });
+        case 'esri_topo': return new XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', maxZoom: 19, crossOrigin: 'anonymous' });
+        case 'esri_terrain': return new XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}', maxZoom: 13, crossOrigin: 'anonymous' });
+        case 'esri_shaded': return new XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', maxZoom: 13, crossOrigin: 'anonymous' });
+        case 'usgs_topo': return new XYZ({ url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', maxZoom: 16, crossOrigin: 'anonymous' });
+        case 'opentopo': return new XYZ({ url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png', maxZoom: 17, crossOrigin: 'anonymous' });
+        case 'morocco_topo': return new XYZ({ url: 'https://wmts.carto.ma/tiles/{z}/{x}/{y}.png', maxZoom: 18, crossOrigin: 'anonymous' });
+        default: return new XYZ({ url: 'https://mt{0-3}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', maxZoom: 22, crossOrigin: 'anonymous' });
+    }
+};
+
+const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelectionComplete, onMouseMove, onManualFeaturesChange, selectedZone, basemapId }, ref) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const sourceRef = useRef<VectorSource>(new VectorSource()); 
@@ -153,12 +174,11 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
           labelText = feature.get('name');
       }
 
-      // Professional Black Label with thick White Halo as requested
       const textStyle = new Text({
           text: labelText,
           font: 'bold 12px Roboto, sans-serif',
-          fill: new Fill({ color: '#000000' }), // Professional Black
-          stroke: new Stroke({ color: '#ffffff', width: 4 }), // Thick White Halo
+          fill: new Fill({ color: '#000000' }), 
+          stroke: new Stroke({ color: '#ffffff', width: 4 }),
           offsetY: -15,
           overflow: true,
           placement: feature.getGeometry()?.getType() === 'LineString' ? 'line' : 'point'
@@ -168,12 +188,12 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       const type = geometry.getType();
 
       return new Style({
-          stroke: new Stroke({ color: '#91E400', width: 3 }), // Lime Green Border requested
-          fill: new Fill({ color: 'rgba(0, 255, 64, 0.2)' }), // Phosphorescent Green Fill requested
+          stroke: new Stroke({ color: '#91E400', width: 3 }), 
+          fill: new Fill({ color: 'rgba(0, 255, 64, 0.2)' }), 
           text: labelText ? textStyle : undefined,
           image: type === 'Point' ? new CircleStyle({
               radius: 7,
-              fill: new Fill({ color: '#00FF40' }), // Phosphorescent Green requested
+              fill: new Fill({ color: '#00FF40' }), 
               stroke: new Stroke({ color: '#91E400', width: 2 })
           }) : undefined
       });
@@ -487,7 +507,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
   useEffect(() => {
     const overlay = new Overlay({ element: popupRef.current!, autoPan: true, positioning: 'bottom-center', offset: [0, -25] });
     overlayRef.current = overlay;
-    const baseLayer = new TileLayer({ source: new XYZ({ url: `https://mt{0-3}.google.com/vt/lyrs=${mapType === 'satellite' ? 's' : 'y'}&x={x}&y={y}&z={z}`, maxZoom: 22, crossOrigin: 'anonymous' }) });
+    const baseLayer = new TileLayer({ source: getBasemapSource(basemapId) });
     baseLayerRef.current = baseLayer;
     const select = new Select({ layers: [ new VectorLayer({ source: sourceRef.current }), new VectorLayer({ source: pointsSourceRef.current }), new VectorLayer({ source: kmlSourceRef.current }) ], style: selectedStyleFunction });
     select.on('select', (e) => { 
@@ -533,7 +553,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     mapRef.current = map; return () => map.setTarget(undefined);
   }, []);
 
-  useEffect(() => { if (baseLayerRef.current) baseLayerRef.current.setSource(new XYZ({ url: `https://mt{0-3}.google.com/vt/lyrs=${mapType === 'satellite' ? 's' : 'y'}&x={x}&y={y}&z={z}`, maxZoom: 22, crossOrigin: 'anonymous' })); }, [mapType]);
+  useEffect(() => { if (baseLayerRef.current) baseLayerRef.current.setSource(getBasemapSource(basemapId)); }, [basemapId]);
 
   return (
       <div ref={mapElement} className="w-full h-full bg-slate-50 relative overflow-hidden">

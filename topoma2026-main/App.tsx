@@ -39,7 +39,24 @@ interface ManualFeatureInfo {
 
 type WorkflowStep = 'IDLE' | 'SELECTED' | 'PROCESSING' | 'DONE';
 type ToolType = 'Rectangle' | 'Polygon' | 'Point' | 'Line' | 'Pan' | 'MeasureLength' | 'MeasureArea' | 'Edit' | 'Delete' | null;
-type MapType = 'satellite' | 'hybrid';
+
+const BASEMAPS = [
+    { id: 'google_sat', label: 'Satellite (Google)', icon: '🛰️' },
+    { id: 'google_hybrid', label: 'Satellite + Labels (Default)', icon: '🛰️📍' },
+    { id: 'google_roads', label: 'Roads (Google)', icon: '🛣️' },
+    { id: 'google_terrain', label: 'Terrain (Google)', icon: '⛰️' },
+    { id: 'google_hybrid_alt', label: 'Hybrid Alternative (Google)', icon: '🛰️📍' },
+    { id: 'osm_standard', label: 'OSM Standard', icon: '🗺️' },
+    { id: 'osm_hot', label: 'OSM Humanitarian', icon: '🆘' },
+    { id: 'esri_sat', label: 'Aerial Imagery (ESRI)', icon: '🛰️' },
+    { id: 'esri_streets', label: 'Streets (ESRI)', icon: '🛣️' },
+    { id: 'esri_topo', label: 'Topographic (ESRI)', icon: '🗺️' },
+    { id: 'esri_terrain', label: 'Terrain (ESRI)', icon: '⛰️' },
+    { id: 'esri_shaded', label: 'Shaded Relief (ESRI)', icon: '🌋' },
+    { id: 'usgs_topo', label: 'USGS Topographic', icon: '🗺️' },
+    { id: 'opentopo', label: 'OpenTopo Map', icon: '🗺️🌍' },
+    { id: 'morocco_topo', label: 'Morocco Topographic', icon: '🇲🇦' }
+];
 
 const EXPORT_SCALES = [
   { label: '10000 km', value: 1000000000 },
@@ -137,7 +154,8 @@ const App: React.FC = () => {
   const [zipBlob, setZipBlob] = useState<Blob | null>(null);
   const [fileName, setFileName] = useState("");
   const [selectedScale, setSelectedScale] = useState<number>(1000);
-  const [mapType, setMapType] = useState<MapType>('satellite');
+  const [basemapId, setBasemapId] = useState<string>('google_hybrid');
+  const [basemapPanelOpen, setBasemapPanelOpen] = useState(false);
   
   const [measureUnit, setMeasureUnit] = useState<string>('m');
   const [tocOpen, setTocOpen] = useState(false); 
@@ -346,7 +364,6 @@ const App: React.FC = () => {
     reader.readAsArrayBuffer(selectedExcelFile);
   };
 
-  // Fixed typo 'iNaN' to 'isNaN'
   const handleManualAddPoint = () => {
     const x = parseCoordinateValue(manualX);
     const y = parseCoordinateValue(manualY);
@@ -498,10 +515,9 @@ const App: React.FC = () => {
                       </div>
                   )}
                </div>
-               <button onClick={() => setTocOpen(!tocOpen)} className={`flex h-8 px-3 items-center gap-2 rounded border ml-1 ${tocOpen ? 'bg-neutral-300 border-neutral-400' : 'bg-white hover:bg-neutral-200'}`}>
-                  <i className="fas fa-layer-group text-blue-600"></i> <span className="text-xs font-bold hidden sm:inline">Couches</span>
+               <button onClick={() => setTocOpen(!tocOpen)} className={`flex h-8 px-3 items-center gap-2 rounded border ml-1 ${tocOpen ? 'bg-blue-600 text-white border-blue-700' : 'bg-white hover:bg-neutral-200'}`}>
+                  <i className={`fas fa-layer-group ${tocOpen ? 'text-white' : 'text-blue-600'}`}></i> <span className="text-xs font-bold hidden sm:inline">Couches</span>
                </button>
-               <button onClick={() => setMapType(prev => prev === 'satellite' ? 'hybrid' : 'satellite')} className="md:hidden h-8 w-8 flex items-center justify-center rounded border bg-white shadow-sm ml-1"><i className={`fas ${mapType === 'satellite' ? 'fa-globe-americas' : 'fa-map'}`}></i></button>
           </div>
       </div>
 
@@ -544,8 +560,48 @@ const App: React.FC = () => {
 
           {/* CENTER: MAP */}
           <div className="flex-grow relative bg-white z-10">
-              {/* Drawing Tools Container: Shifts left when TOC is open to appear beside it */}
+              {/* Drawing Tools Container */}
               <div className={`absolute top-2 transition-all duration-300 z-30 flex flex-col items-end pointer-events-none gap-2 ${tocOpen ? 'right-[calc(18rem+0.5rem)]' : 'right-2'}`}>
+                  
+                  {/* Unified Basemap Selector */}
+                  <div className="relative pointer-events-auto">
+                    <button 
+                        onClick={() => setBasemapPanelOpen(!basemapPanelOpen)} 
+                        title="Changer de fond de plan"
+                        className={`w-10 h-10 rounded-lg shadow-md border flex items-center justify-center transition-all hover:scale-105 ${basemapPanelOpen ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-blue-600'}`}
+                    >
+                        <i className={`fas fa-layer-group text-lg`}></i>
+                    </button>
+                    
+                    {basemapPanelOpen && (
+                        <div className="absolute top-0 right-12 bg-white rounded-lg shadow-2xl border border-neutral-200 w-64 z-[100] overflow-hidden animate-scale-in origin-right">
+                            <div className="bg-neutral-100 p-2 border-b flex justify-between items-center">
+                                <span className="text-[11px] font-bold text-neutral-700">Sélectionner le fond de plan</span>
+                                <CloseButton onClick={() => setBasemapPanelOpen(false)} />
+                            </div>
+                            <div className="max-h-[400px] overflow-y-auto p-1">
+                                {BASEMAPS.map((bm) => (
+                                    <label key={bm.id} className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 cursor-pointer group transition-colors">
+                                        <input 
+                                            type="radio" 
+                                            name="basemap" 
+                                            checked={basemapId === bm.id} 
+                                            onChange={() => { setBasemapId(bm.id); setBasemapPanelOpen(false); }}
+                                            className="w-4 h-4 text-blue-600 border-neutral-300 focus:ring-blue-500"
+                                        />
+                                        <span className="text-[13px] text-neutral-600 group-hover:text-neutral-800 flex items-center gap-2">
+                                            <span className="text-base">{bm.icon}</span>
+                                            {bm.label}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                  </div>
+                  
+                  <div className="h-1"></div>
+
                   <button onClick={() => { setShowExcelPanel(!showExcelPanel); setShowGoToPanel(false); }} className="pointer-events-auto w-10 h-10 bg-white rounded-lg shadow-md border hover:bg-neutral-50 flex items-center justify-center text-green-600"><i className="fas fa-file-excel text-lg"></i></button>
                   {showExcelPanel && (<div className="pointer-events-auto mt-2 bg-white rounded-lg shadow-xl border p-3 w-64 absolute top-full right-0 z-50"><div className="flex justify-between items-center mb-2 border-b"><span className="text-xs font-bold">Import Excel XY</span><CloseButton onClick={() => setShowExcelPanel(false)} /></div><div className="space-y-3"><div><label className="block text-[10px] mb-0.5">Projection</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border rounded p-1">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div><div className="border border-dashed rounded p-2 text-center"><button onClick={() => handleFileClick(excelInputRef)} className="text-xs text-blue-600 font-medium underline">Choisir un fichier</button><div className="text-[10px] truncate">{selectedExcelFile ? selectedExcelFile.name : "Aucun fichier"}</div></div><button onClick={processExcelFile} disabled={!selectedExcelFile} className={`w-full text-white text-xs py-1.5 rounded ${selectedExcelFile ? 'bg-green-600' : 'bg-neutral-300'}`}>Charger les points</button></div></div>)}
                   <button onClick={() => toggleTool('Edit')} className={`pointer-events-auto w-10 h-10 rounded-lg shadow-md border flex items-center justify-center ${activeTool === 'Edit' ? 'bg-orange-500 text-white' : 'bg-white text-neutral-700'}`}><i className="fas fa-pen-to-square text-lg"></i></button>
@@ -558,7 +614,7 @@ const App: React.FC = () => {
 
               <MapComponent 
                 ref={mapComponentRef} 
-                mapType={mapType}
+                basemapId={basemapId}
                 selectedZone={selectedZone}
                 onMouseMove={(x, y) => setMouseCoords({x, y})}
                 onManualFeaturesChange={(features) => setManualFeatures(features)}
@@ -643,51 +699,51 @@ const App: React.FC = () => {
               )}
           </div>
 
-          {/* RIGHT: TOC (Couches - Overlay Panel) */}
-          <div className={`${tocOpen ? 'w-72 translate-x-0' : 'w-0 translate-x-full overflow-hidden'} transition-all duration-300 bg-white border-l border-neutral-300 flex flex-col absolute right-0 top-0 h-full z-40 shadow-2xl shrink-0`}>
-              <div className="w-72 flex flex-col h-full">
-                <div className="bg-neutral-100 p-2 border-b font-bold text-xs text-neutral-700 flex justify-between items-center shrink-0">
-                    <span className="flex items-center gap-1.5"><i className="fas fa-layer-group text-blue-600"></i> Couches</span>
-                    <div className="flex gap-3">
-                        <div className="flex gap-1">
-                          <button onClick={() => handleFileClick(kmlInputRef)} title="KML" className="text-blue-500 hover:text-blue-700"><i className="fas fa-globe"></i></button>
-                          <button onClick={() => handleFileClick(shpInputRef)} title="SHP" className="text-green-500 hover:text-green-700"><i className="fas fa-shapes"></i></button>
-                          <button onClick={() => handleFileClick(geojsonInputRef)} title="JSON" className="text-teal-500 hover:text-teal-700"><i className="fas fa-file-code"></i></button>
-                          <button onClick={() => handleFileClick(dxfInputRef)} title="DXF" className="text-purple-500 hover:text-purple-700"><i className="fas fa-pencil-ruler"></i></button>
+          {/* RIGHT: TOC (Couches - Sidebar Panel) */}
+          <div className={`${tocOpen ? 'w-80 border-l' : 'w-0 overflow-hidden'} transition-all duration-300 bg-white border-neutral-300 flex flex-col absolute right-0 top-0 h-full z-40 shadow-2xl shrink-0`}>
+              <div className="w-80 flex flex-col h-full">
+                <div className="bg-neutral-100 p-2.5 border-b font-bold text-xs text-neutral-700 flex justify-between items-center shrink-0">
+                    <span className="flex items-center gap-2"><i className="fas fa-layer-group text-blue-600"></i> Couches de données</span>
+                    <div className="flex gap-3 items-center">
+                        <div className="flex gap-1.5 border-r pr-2 mr-1">
+                          <button onClick={() => handleFileClick(kmlInputRef)} title="KML" className="text-blue-500 hover:scale-110"><i className="fas fa-globe"></i></button>
+                          <button onClick={() => handleFileClick(shpInputRef)} title="SHP" className="text-green-500 hover:scale-110"><i className="fas fa-shapes"></i></button>
+                          <button onClick={() => handleFileClick(geojsonInputRef)} title="JSON" className="text-teal-500 hover:scale-110"><i className="fas fa-file-code"></i></button>
+                          <button onClick={() => handleFileClick(dxfInputRef)} title="DXF" className="text-purple-500 hover:scale-110"><i className="fas fa-pencil-ruler"></i></button>
                         </div>
                         <CloseButton onClick={() => setTocOpen(false)} />
                     </div>
                 </div>
-                <div className="flex-grow overflow-y-auto p-2">
-                    <div className="text-xs select-none space-y-4">
-                        <div>
-                          <div className="flex items-center gap-1 mb-1.5 font-bold text-neutral-800"><i className="fas fa-draw-polygon text-blue-500"></i> Dessins Manuels</div>
-                          <div className="ml-4 border-l border-neutral-200 pl-2">
-                              <div className="flex items-center justify-between py-1 group">
-                                  <span className={`cursor-pointer truncate ${selectedLayerId === 'manual' ? 'font-bold text-blue-700 underline' : 'hover:text-blue-600'}`} onClick={() => handleLayerSelect('manual')}>Tous les dessins</span>
-                                  <button onClick={() => openAttributeTable('manual')} title="Table d'attributs" className="text-blue-500 hover:scale-110"><i className="fas fa-table"></i></button>
-                              </div>
+                <div className="flex-grow overflow-y-auto p-4 space-y-6">
+                    <div>
+                      <div className="flex items-center gap-2 mb-3 font-bold text-xs text-neutral-800 uppercase tracking-wider"><i className="fas fa-draw-polygon text-blue-500"></i> Dessins Manuels</div>
+                      <div className="space-y-1">
+                          <div className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${selectedLayerId === 'manual' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'hover:bg-neutral-50 text-neutral-600'}`} onClick={() => handleLayerSelect('manual')}>
+                              <span className="text-xs font-medium truncate">Tous les éléments</span>
+                              <button onClick={(e) => { e.stopPropagation(); openAttributeTable('manual'); }} title="Table d'attributs" className="text-blue-500 hover:scale-110 p-1"><i className="fas fa-table"></i></button>
                           </div>
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-1.5 font-bold text-neutral-800"><i className="fas fa-file-import text-yellow-600"></i> Fichiers Importés</div>
-                          <div className="ml-4 border-l border-neutral-200 pl-2 space-y-2">
-                              {layers.map((layer) => (
-                                  <div key={layer.id} className={`flex items-center justify-between py-1 group border-b border-neutral-50 last:border-0 ${selectedLayerId === layer.id ? 'bg-blue-50/50 -ml-2 pl-2 rounded-l' : ''}`}>
-                                      <span className={`truncate cursor-pointer flex-grow ${selectedLayerId === layer.id ? 'font-bold text-blue-700' : 'text-neutral-600 hover:text-blue-600 transition-colors'}`} onClick={() => handleLayerSelect(layer.id)} title={layer.name}>
-                                          {layer.name}
-                                      </span>
-                                      <div className="flex gap-2.5 shrink-0 ml-2">
-                                          <button onClick={() => openLabelPicker(layer)} title="Étiquettes" className="text-orange-500 hover:text-orange-700 transition-transform hover:scale-110"><i className="fas fa-tag"></i></button>
-                                          <button onClick={() => openAttributeTable(layer)} title="Données" className="text-blue-500 hover:text-blue-700 transition-transform hover:scale-110"><i className="fas fa-table"></i></button>
-                                      </div>
-                                  </div>
-                              ))}
-                              {layers.length === 0 && <div className="text-[10px] text-neutral-400 italic py-2">Aucun fichier chargé.</div>}
-                          </div>
-                        </div>
+                      </div>
                     </div>
 
+                    <div>
+                      <div className="flex items-center gap-2 mb-3 font-bold text-xs text-neutral-800 uppercase tracking-wider"><i className="fas fa-file-import text-yellow-600"></i> Fichiers Importés</div>
+                      <div className="space-y-1">
+                          {layers.length > 0 ? layers.map((layer) => (
+                              <div key={layer.id} className={`flex items-center justify-between p-2 rounded cursor-pointer group transition-colors ${selectedLayerId === layer.id ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'hover:bg-neutral-50 text-neutral-600'}`} onClick={() => handleLayerSelect(layer.id)}>
+                                  <span className="text-xs font-medium truncate flex-grow" title={layer.name}>
+                                      {layer.name}
+                                  </span>
+                                  <div className="flex gap-2 shrink-0 ml-2">
+                                      <button onClick={(e) => { e.stopPropagation(); openLabelPicker(layer); }} title="Étiquettes" className="text-orange-500 hover:text-orange-700 transition-transform hover:scale-110"><i className="fas fa-tag"></i></button>
+                                      <button onClick={(e) => { e.stopPropagation(); openAttributeTable(layer); }} title="Données" className="text-blue-500 hover:text-blue-700 transition-transform hover:scale-110"><i className="fas fa-table"></i></button>
+                                  </div>
+                              </div>
+                          )) : (
+                              <div className="text-[11px] text-neutral-400 italic py-4 text-center border border-dashed rounded bg-neutral-50">Aucun fichier chargé</div>
+                          )}
+                      </div>
+                    </div>
+                    
                     <DeveloperFooter />
                 </div>
               </div>
