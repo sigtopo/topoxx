@@ -102,6 +102,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
   const popupRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<Overlay | null>(null);
   const [popupContent, setPopupContent] = useState<PopupContent>(null);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const selectedZoneRef = useRef(selectedZone); 
   const sketchRef = useRef<any>(null);
   const helpTooltipElementRef = useRef<HTMLElement | null>(null);
@@ -113,13 +114,12 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
   const activeMeasurementsRef = useRef<Array<{ feature: Feature, overlay: Overlay, type: 'Length' | 'Area' }>>([]);
   const layerLabelFieldsRef = useRef<Record<string, string>>({});
 
-  // Helper for human-readable zone name
   const getZoneLabel = (code: string) => {
       const zones: Record<string, string> = {
-          'EPSG:26191': 'Zone 1',
-          'EPSG:26192': 'Zone 2',
-          'EPSG:26194': 'Zone 3',
-          'EPSG:26195': 'Zone 4',
+          'EPSG:26191': 'ZONE 1',
+          'EPSG:26192': 'ZONE 2',
+          'EPSG:26194': 'ZONE 3',
+          'EPSG:26195': 'ZONE 4',
           'EPSG:4326': 'WGS 84'
       };
       return zones[code] || code;
@@ -240,6 +240,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
           zone: zoneCode,
           zoneLabel: getZoneLabel(zoneCode)
       });
+      setShowDownloadMenu(false);
       overlayRef.current?.setPosition(coordinate);
       const z = await fetchElevation(wgs84[1], wgs84[0]);
       setPopupContent(prev => prev && prev.type === 'POINT' ? { ...prev, z: z } : prev);
@@ -273,6 +274,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
       URL.revokeObjectURL(url);
+      setShowDownloadMenu(false);
   };
 
   const calculateExtentAndNotify = (features: Feature[], sourceExtent: number[], featureId?: string) => {
@@ -490,7 +492,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
   }));
 
   useEffect(() => {
-    const overlay = new Overlay({ element: popupRef.current!, autoPan: true, positioning: 'bottom-center', offset: [0, -35] });
+    const overlay = new Overlay({ element: popupRef.current!, autoPan: true, positioning: 'bottom-center', offset: [0, -25] });
     overlayRef.current = overlay;
     const baseLayer = new TileLayer({ source: new XYZ({ url: `https://mt{0-3}.google.com/vt/lyrs=${mapType === 'satellite' ? 's' : 'y'}&x={x}&y={y}&z={z}`, maxZoom: 22, crossOrigin: 'anonymous' }) });
     baseLayerRef.current = baseLayer;
@@ -532,6 +534,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
             showPointPopup(f, (f.getGeometry() as Point).getCoordinates());
         } else {
             overlayRef.current?.setPosition(undefined);
+            setShowDownloadMenu(false);
         }
     });
     mapRef.current = map; return () => map.setTarget(undefined);
@@ -541,69 +544,73 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
 
   return (
       <div ref={mapElement} className="w-full h-full bg-slate-50 relative overflow-hidden">
-          <div ref={popupRef} className="absolute bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-0 z-50 min-w-[280px] border border-neutral-100 overflow-hidden transform -translate-x-1/2">
+          <div ref={popupRef} className="absolute bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] p-0 z-50 min-w-[210px] border border-neutral-100 overflow-visible transform -translate-x-1/2">
              {popupContent && popupContent.type === 'POINT' && (
-                 <div className="flex flex-col text-[13px] custom-modal-font">
+                 <div className="flex flex-col text-[12px] custom-modal-font">
                      {/* Header */}
-                     <div className="px-4 py-3 border-b flex justify-between items-center bg-white">
-                         <span className="font-bold text-neutral-800 text-lg">{popupContent.label}</span>
-                         <button onClick={() => overlayRef.current?.setPosition(undefined)} className="text-neutral-400 hover:text-neutral-600 transition-colors">
-                            <i className="fas fa-times text-lg"></i>
+                     <div className="px-3 py-2 border-b flex justify-between items-center bg-white rounded-t-xl">
+                         <span className="font-bold text-neutral-800 text-sm">{popupContent.label}</span>
+                         <button onClick={() => overlayRef.current?.setPosition(undefined)} className="text-neutral-400 hover:text-red-500 transition-colors">
+                            <i className="fas fa-times text-sm"></i>
                          </button>
                      </div>
                      
-                     <div className="p-5 space-y-5 bg-white">
+                     <div className="p-3 space-y-3 bg-white">
                          {/* Projected Group */}
-                         <div className="space-y-1.5">
-                             <div className="text-blue-600 font-bold text-sm mb-1">{popupContent.zoneLabel}</div>
-                             <div className="grid grid-cols-[24px_1fr] gap-x-2 text-neutral-700">
-                                 <span className="font-bold text-neutral-400">X:</span>
-                                 <span className="font-mono">{popupContent.x.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</span>
-                                 <span className="font-bold text-neutral-400">Y:</span>
-                                 <span className="font-mono">{popupContent.y.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</span>
-                                 <span className="font-bold text-neutral-400">Z:</span>
-                                 <span className="font-bold text-emerald-600 font-mono">{popupContent.z} {popupContent.z !== '...' && 'm'}</span>
+                         <div className="space-y-0.5">
+                             <div className="text-blue-600 font-bold text-[10px] mb-1">{popupContent.zoneLabel}</div>
+                             <div className="grid grid-cols-[16px_1fr] gap-x-1 text-neutral-700 leading-tight">
+                                 <span className="font-bold text-neutral-300">X</span>
+                                 <span className="font-mono text-[11px]">{popupContent.x.toFixed(2)}</span>
+                                 <span className="font-bold text-neutral-300">Y</span>
+                                 <span className="font-mono text-[11px]">{popupContent.y.toFixed(2)}</span>
+                                 <span className="font-bold text-neutral-300">Z</span>
+                                 <span className="font-bold text-emerald-600 font-mono text-[11px]">{popupContent.z}</span>
                              </div>
                          </div>
 
                          {/* Geographic Group */}
-                         <div className="space-y-1.5 pt-2 border-t border-neutral-50">
-                             <div className="text-neutral-500 font-bold text-sm mb-1">WGS 84</div>
-                             <div className="grid grid-cols-[32px_1fr] gap-x-2 text-neutral-700">
-                                 <span className="text-neutral-400 font-medium">Lat:</span>
-                                 <span className="font-mono">{popupContent.lat.toFixed(7)}°</span>
-                                 <span className="text-neutral-400 font-medium">Lon:</span>
-                                 <span className="font-mono">{popupContent.lon.toFixed(7)}°</span>
+                         <div className="space-y-0.5 pt-2 border-t border-neutral-50">
+                             <div className="text-neutral-400 font-bold text-[10px] mb-1 uppercase tracking-wider">WGS 84</div>
+                             <div className="grid grid-cols-[16px_1fr] gap-x-1 text-neutral-600 leading-tight">
+                                 <span className="text-neutral-300 font-bold">L</span>
+                                 <span className="font-mono text-[11px]">{popupContent.lat.toFixed(6)}</span>
+                                 <span className="text-neutral-300 font-bold">G</span>
+                                 <span className="font-mono text-[11px]">{popupContent.lon.toFixed(6)}</span>
                              </div>
                          </div>
                      </div>
 
-                     {/* Footer Buttons */}
-                     <div className="bg-slate-50 p-3 grid grid-cols-4 gap-2 border-t border-neutral-100">
-                         <button onClick={() => downloadPointFile('TXT')} className="flex flex-col items-center gap-1 group">
-                             <div className="w-10 h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-neutral-600 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-200 transition-all shadow-sm">
-                                 <i className="far fa-file-lines text-lg"></i>
-                             </div>
-                             <span className="text-[10px] font-bold text-neutral-700 uppercase">TXT</span>
+                     {/* Footer Dropdown */}
+                     <div className="relative border-t border-neutral-50">
+                         <button 
+                            onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                            className="w-full px-3 py-2.5 text-blue-600 font-bold text-[11px] flex justify-between items-center bg-white hover:bg-blue-50/50 transition-colors rounded-b-xl uppercase tracking-wider"
+                         >
+                             <span>Download</span>
+                             <i className={`fas fa-chevron-right transition-transform text-[9px] ${showDownloadMenu ? 'rotate-90' : ''}`}></i>
                          </button>
-                         <button onClick={() => downloadPointFile('DXF')} className="flex flex-col items-center gap-1 group">
-                             <div className="w-10 h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-blue-600 group-hover:bg-blue-50 group-hover:border-blue-200 transition-all shadow-sm">
-                                 <i className="fas fa-file-code text-lg"></i>
+                         
+                         {showDownloadMenu && (
+                             <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-neutral-100 overflow-hidden z-[60] animate-slide-up">
+                                 <button onClick={() => downloadPointFile('TXT')} className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 border-b border-neutral-50">
+                                     <i className="far fa-file-lines text-neutral-400 w-4"></i>
+                                     <span className="font-bold text-neutral-700">TXT File</span>
+                                 </button>
+                                 <button onClick={() => downloadPointFile('DXF')} className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 border-b border-neutral-50">
+                                     <i className="fas fa-file-code text-blue-500 w-4"></i>
+                                     <span className="font-bold text-neutral-700">DXF AutoCAD</span>
+                                 </button>
+                                 <button onClick={() => downloadPointFile('JSON')} className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 border-b border-neutral-50">
+                                     <i className="fas fa-code text-emerald-500 w-4"></i>
+                                     <span className="font-bold text-neutral-700">JSON Data</span>
+                                 </button>
+                                 <button onClick={() => downloadPointFile('KML')} className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2">
+                                     <i className="fas fa-globe text-orange-500 w-4"></i>
+                                     <span className="font-bold text-neutral-700">KML Google Earth</span>
+                                 </button>
                              </div>
-                             <span className="text-[10px] font-bold text-neutral-700 uppercase">DXF</span>
-                         </button>
-                         <button onClick={() => downloadPointFile('JSON')} className="flex flex-col items-center gap-1 group">
-                             <div className="w-10 h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-50 group-hover:border-emerald-200 transition-all shadow-sm">
-                                 <i className="fas fa-code text-lg"></i>
-                             </div>
-                             <span className="text-[10px] font-bold text-neutral-700 uppercase">JSON</span>
-                         </button>
-                         <button onClick={() => downloadPointFile('KML')} className="flex flex-col items-center gap-1 group">
-                             <div className="w-10 h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-orange-500 group-hover:bg-orange-50 group-hover:border-orange-200 transition-all shadow-sm">
-                                 <i className="fas fa-globe text-lg"></i>
-                             </div>
-                             <span className="text-[10px] font-bold text-neutral-700 uppercase">KML</span>
-                         </button>
+                         )}
                      </div>
                  </div>
              )}
