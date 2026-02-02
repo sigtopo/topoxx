@@ -186,14 +186,15 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       const geometry = feature.getGeometry();
       const type = geometry.getType();
 
+      // RED CONTOUR, TRANSPARENT FILL for imported elements
       return new Style({
-          stroke: new Stroke({ color: '#91E400', width: 3 }), 
-          fill: new Fill({ color: 'rgba(0, 255, 64, 0.2)' }), 
+          stroke: new Stroke({ color: '#ff0000', width: 3 }), 
+          fill: new Fill({ color: 'rgba(0, 0, 0, 0)' }), 
           text: labelText ? textStyle : undefined,
           image: type === 'Point' ? new CircleStyle({
               radius: 7,
-              fill: new Fill({ color: '#00FF40' }), 
-              stroke: new Stroke({ color: '#91E400', width: 2 })
+              fill: new Fill({ color: '#ff0000' }), 
+              stroke: new Stroke({ color: '#ffffff', width: 2 })
           }) : undefined
       });
   };
