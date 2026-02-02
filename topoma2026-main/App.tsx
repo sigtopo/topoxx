@@ -38,7 +38,7 @@ interface ManualFeatureInfo {
 }
 
 type WorkflowStep = 'IDLE' | 'SELECTED' | 'PROCESSING' | 'DONE';
-type ToolType = 'Rectangle' | 'Polygon' | 'Point' | 'Line' | 'Pan' | 'MeasureLength' | 'MeasureArea' | 'Edit' | 'Delete' | null;
+type ToolType = 'Rectangle' | 'Polygon' | 'Point' | 'Line' | 'Pan' | 'MeasureLength' | 'MeasureArea' | 'Edit' | 'Delete' | 'Select' | null;
 
 const BASEMAPS = [
     { id: 'google_sat', label: 'Satellite (Google)', icon: '🛰️' },
@@ -267,7 +267,7 @@ const App: React.FC = () => {
     } else {
         mapComponentRef.current?.setDrawTool(newTool === 'Pan' ? null : newTool);
     }
-    if (newTool && !['Pan', 'MeasureLength', 'MeasureArea', 'Point', 'Edit', 'Delete'].includes(newTool)) {
+    if (newTool && !['Pan', 'MeasureLength', 'MeasureArea', 'Point', 'Edit', 'Delete', 'Select'].includes(newTool)) {
         setSelectedLayerId('manual');
     }
   };
@@ -451,6 +451,30 @@ const App: React.FC = () => {
             alert("Erreur lors du traitement. Vérifiez que la zone est entièrement chargée."); 
         }
     }, 1000);
+  };
+
+  const handleBulkDownload = async () => {
+    if (!mapComponentRef.current) return;
+    const exportData = await mapComponentRef.current.getDrawnFeaturesExport();
+    if (!exportData || (exportData.geojson === "{}" && exportData.kml === "")) {
+        alert("Aucun élément dessiné à exporter.");
+        return;
+    }
+
+    const zip = new JSZip();
+    const date = new Date().toISOString().split('T')[0];
+    const baseName = `topoma_drawings_${date}`;
+    
+    zip.file(`${baseName}.geojson`, exportData.geojson);
+    zip.file(`${baseName}.kml`, exportData.kml);
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${baseName}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const downloadFile = () => {
@@ -674,13 +698,27 @@ const App: React.FC = () => {
                   </div>
                   
                   {/* DRAWING TOOLS (Ordered as requested) */}
-                  <button onClick={() => toggleTool('Point')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Point' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="نقطة"><i className="fas fa-map-marker-alt text-base"></i></button>
-                  <button onClick={() => toggleTool('Line')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Line' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="خط"><i className="fas fa-slash text-base"></i></button>
-                  <button onClick={() => toggleTool('Polygon')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Polygon' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="مضلع"><i className="fas fa-draw-polygon text-base"></i></button>
-                  <button onClick={() => toggleTool('Rectangle')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Rectangle' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="مربع"><i className="far fa-square text-base"></i></button>
-                  <button onClick={() => toggleTool('Edit')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Edit' ? 'bg-orange-500 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="تعديل"><i className="fas fa-pen-to-square text-base"></i></button>
-                  <button onClick={() => toggleTool('Delete')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Delete' ? 'bg-red-600 text-white' : 'bg-white text-red-600 hover:bg-red-50'}`} title="حذف عنصر"><i className="fas fa-trash-alt text-base"></i></button>
-                  <button onClick={() => mapComponentRef.current?.undo()} className="pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center bg-white text-neutral-700 hover:bg-neutral-50 transition-all active:scale-90" title="تراجع"><i className="fas fa-rotate-left text-base"></i></button>
+                  <div className="flex flex-col gap-1.5 items-end">
+                      <div className="flex gap-1.5 items-center">
+                        {(activeTool === 'Select' || manualFeatures.length > 0) && (
+                            <button 
+                                onClick={handleBulkDownload}
+                                title="Télécharger les éléments dessinés (KML/JSON)"
+                                className="pointer-events-auto w-9 h-9 rounded-full shadow-lg border-2 border-white bg-green-600 text-white hover:bg-green-700 flex items-center justify-center transition-all animate-scale-in"
+                            >
+                                <i className="fas fa-cloud-download-alt text-base"></i>
+                            </button>
+                        )}
+                        <button onClick={() => toggleTool('Select')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Select' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="Sélectionner"><i className="fas fa-mouse-pointer text-base"></i></button>
+                      </div>
+                      <button onClick={() => toggleTool('Point')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Point' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="نقطة"><i className="fas fa-map-marker-alt text-base"></i></button>
+                      <button onClick={() => toggleTool('Line')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Line' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="خط"><i className="fas fa-slash text-base"></i></button>
+                      <button onClick={() => toggleTool('Polygon')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Polygon' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="مضلع"><i className="fas fa-draw-polygon text-base"></i></button>
+                      <button onClick={() => toggleTool('Rectangle')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Rectangle' ? 'bg-blue-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="مربع"><i className="far fa-square text-base"></i></button>
+                      <button onClick={() => toggleTool('Edit')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Edit' ? 'bg-orange-500 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'}`} title="تعديل"><i className="fas fa-pen-to-square text-base"></i></button>
+                      <button onClick={() => toggleTool('Delete')} className={`pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center transition-all ${activeTool === 'Delete' ? 'bg-red-600 text-white' : 'bg-white text-red-600 hover:bg-red-50'}`} title="حذف عنصر"><i className="fas fa-trash-alt text-base"></i></button>
+                      <button onClick={() => mapComponentRef.current?.undo()} className="pointer-events-auto w-9 h-9 rounded shadow-md border flex items-center justify-center bg-white text-neutral-700 hover:bg-neutral-50 transition-all active:scale-90" title="تراجع"><i className="fas fa-rotate-left text-base"></i></button>
+                  </div>
               </div>
 
               {/* My Location Button (Bottom-Right - Raised higher) */}
@@ -703,7 +741,7 @@ const App: React.FC = () => {
                 onSelectionComplete={(data) => {
                   setExportData({ ...data, projection: selectedZone }); 
                   setStep('SELECTED');
-                  if (activeTool !== 'Edit' && activeTool !== 'Delete') setToolboxOpen(true);
+                  if (activeTool !== 'Edit' && activeTool !== 'Delete' && activeTool !== 'Select') setToolboxOpen(true);
                   if (data.featureId) {
                       setSelectedLayerId(data.featureId);
                       setSelectedAttrFeatureId(data.featureId);
@@ -725,7 +763,7 @@ const App: React.FC = () => {
                               className="w-full h-auto rounded border shadow-inner" 
                           />
                           <div className="mt-3 p-3 bg-blue-50 rounded-lg text-[11px] text-blue-800 italic">
-                              * Assurez-vous que vos colonnes sont nommées 'X' et 'Y' (ou 'Easting'/'Northing').
+                              * Assurez-وزك أن vos colonnes sont nommées 'X' et 'Y' (ou 'Easting'/'Northing').
                           </div>
                       </div>
                   </div>

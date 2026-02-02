@@ -62,7 +62,7 @@ export interface MapComponentRef {
   loadGeoJSON: (file: File, layerId: string) => void;
   loadExcelPoints: (layerId: string, points: any[]) => void;
   addManualPoint: (x: number, y: number, label: string) => void;
-  setDrawTool: (type: 'Rectangle' | 'Polygon' | 'Point' | 'Line' | 'Edit' | 'Delete' | null) => void;
+  setDrawTool: (type: 'Rectangle' | 'Polygon' | 'Point' | 'Line' | 'Edit' | 'Delete' | 'Select' | null) => void;
   setMeasureTool: (type: 'MeasureLength' | 'MeasureArea', unit: string) => void;
   updateMeasureUnit: (unit: string) => void;
   clearAll: () => void;
@@ -76,6 +76,7 @@ export interface MapComponentRef {
   highlightFeature: (id: string) => void;
   getLayerAvailableFields: (layerId: string) => string[];
   setLayerLabelField: (layerId: string, fieldName: string) => void;
+  getDrawnFeaturesExport: () => Promise<{ geojson: string, kml: string }>;
 }
 
 type PopupContent = 
@@ -186,7 +187,6 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       const geometry = feature.getGeometry();
       const type = geometry.getType();
 
-      // RED CONTOUR, TRANSPARENT FILL for imported elements
       return new Style({
           stroke: new Stroke({ color: '#ff0000', width: 3 }), 
           fill: new Fill({ color: 'rgba(0, 0, 0, 0)' }), 
@@ -227,7 +227,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     return area.toFixed(2) + ' m²';
   };
 
-  const notifyManualFeatures = () => { if (onManualFeaturesChange) { const features = sourceRef.current.getFeatures().map(f => ({ id: f.getId() as string, label: f.get('label'), type: f.get('type') })); onManualFeaturesChange(features); } };
+  const notifyManualFeatures = () => { if (onManualFeaturesChange) { const features = sourceRef.current.getFeatures().concat(pointsSourceRef.current.getFeatures()).map(f => ({ id: f.getId() as string, label: f.get('label') || f.get('name') || 'Élément', type: f.get('type') || (f.getGeometry()?.getType() === 'Point' ? 'Point' : 'Polygon') })); onManualFeaturesChange(features); } };
 
   const createMeasureTooltip = () => {
     if (measureTooltipElementRef.current) measureTooltipElementRef.current.parentNode?.removeChild(measureTooltipElementRef.current);
@@ -321,6 +321,14 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
             return cleanProps;
         });
     },
+    getDrawnFeaturesExport: async () => {
+        const features = sourceRef.current.getFeatures().concat(pointsSourceRef.current.getFeatures());
+        const geojsonFormat = new GeoJSON();
+        const geojson = geojsonFormat.writeFeatures(features, { featureProjection: 'EPSG:3857', dataProjection: 'EPSG:4326' });
+        const kmlFormat = new KML();
+        const kml = kmlFormat.writeFeatures(features, { featureProjection: 'EPSG:3857', dataProjection: 'EPSG:4326' });
+        return { geojson, kml };
+    },
     getLayerAvailableFields: (layerId) => {
         const features = kmlSourceRef.current.getFeatures().filter(f => f.get('layerId') === layerId);
         if (features.length === 0) return [];
@@ -371,7 +379,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
         activeMeasurementsRef.current.forEach(item => { const g = item.feature.getGeometry(); const el = item.overlay.getElement(); if (!g || !el) return; el.innerHTML = item.type === 'Area' ? formatAreaMetric(g as Polygon, unit) : formatLength(g as LineString, unit); });
     },
     selectLayer: (layerId) => {
-        const manualFeature = sourceRef.current.getFeatureById(layerId);
+        const manualFeature = sourceRef.current.getFeatureById(layerId) || pointsSourceRef.current.getFeatureById(layerId);
         if (manualFeature) { calculateExtentAndNotify([manualFeature], manualFeature.getGeometry()!.getExtent(), layerId); selectInteractionRef.current?.getFeatures().clear(); selectInteractionRef.current?.getFeatures().push(manualFeature); return; }
         const targetFeatures = layerId === 'manual' ? sourceRef.current.getFeatures() : kmlSourceRef.current.getFeatures().filter(f => f.get('layerId') === layerId);
         if (targetFeatures.length > 0) {
@@ -453,6 +461,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
         pointsSourceRef.current.addFeature(feature); 
         mapRef.current?.getView().animate({ center: coords, zoom: 16 });
         showPointPopup(feature, coords);
+        notifyManualFeatures();
     },
     setMeasureTool: (type, unit) => {
         if (drawInteractionRef.current) mapRef.current?.removeInteraction(drawInteractionRef.current);
@@ -473,7 +482,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     setDrawTool: (type) => {
       if (drawInteractionRef.current) mapRef.current?.removeInteraction(drawInteractionRef.current);
       isDeleteModeRef.current = (type === 'Delete');
-      if (['Edit', 'Delete'].includes(type || '')) { modifyInteractionRef.current?.setActive(type==='Edit'); selectInteractionRef.current?.setActive(true); snapInteractionRef.current?.setActive(type==='Edit'); return; }
+      if (['Edit', 'Delete', 'Select'].includes(type || '')) { modifyInteractionRef.current?.setActive(type==='Edit'); selectInteractionRef.current?.setActive(true); snapInteractionRef.current?.setActive(type==='Edit'); return; }
       if (!type) { modifyInteractionRef.current?.setActive(false); selectInteractionRef.current?.setActive(false); return; }
       const draw = new Draw({ source: type === 'Point' ? pointsSourceRef.current : sourceRef.current, type: type === 'Rectangle' ? 'Circle' : (type === 'Line' ? 'LineString' : (type === 'Point' ? 'Point' : 'Polygon')), geometryFunction: type === 'Rectangle' ? createBox() : undefined });
       draw.on('drawend', (e) => {
@@ -491,97 +500,37 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     deleteSelectedFeature: () => { const s = selectInteractionRef.current?.getFeatures(); if (s) { s.forEach(f => { if (sourceRef.current.hasFeature(f)) sourceRef.current.removeFeature(f); if (pointsSourceRef.current.hasFeature(f)) pointsSourceRef.current.removeFeature(f); if (kmlSourceRef.current.hasFeature(f)) kmlSourceRef.current.removeFeature(f); }); s.clear(); notifyManualFeatures(); } },
     getMapCanvas: async (targetScale, layerId) => {
       if (!mapRef.current) return null;
-      
-      // Identify target features for clipping
       let targetFeatures = layerId === 'manual' ? sourceRef.current.getFeatures() : kmlSourceRef.current.getFeatures().filter(f => f.get('layerId') === layerId);
-      if (targetFeatures.length === 0 && layerId !== 'manual') { const f = sourceRef.current.getFeatureById(layerId!); if (f) targetFeatures = [f]; }
+      if (targetFeatures.length === 0 && layerId !== 'manual') { const f = sourceRef.current.getFeatureById(layerId!) || pointsSourceRef.current.getFeatureById(layerId!); if (f) targetFeatures = [f]; }
       if (targetFeatures.length === 0) return null;
-
-      const extent = targetFeatures.reduce((ext, f) => {
-          const e = f.getGeometry()!.getExtent();
-          return [Math.min(ext[0], e[0]), Math.min(ext[1], e[1]), Math.max(ext[2], e[2]), Math.max(ext[3], e[3])];
-      }, [Infinity, Infinity, -Infinity, -Infinity]);
-
+      const extent = targetFeatures.reduce((ext, f) => { const e = f.getGeometry()!.getExtent(); return [Math.min(ext[0], e[0]), Math.min(ext[1], e[1]), Math.max(ext[2], e[2]), Math.max(ext[3], e[3])]; }, [Infinity, Infinity, -Infinity, -Infinity]);
       const view = mapRef.current.getView(); 
       const center = [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2];
       const res = targetScale ? getResolutionFromScale(targetScale, toLonLat(center)[1]) : view.getResolution()!;
-      
       const width = Math.ceil((extent[2] - extent[0]) / res); 
       const height = Math.ceil((extent[3] - extent[1]) / res);
-      
       const originalSize = mapRef.current.getSize();
       const originalResolution = view.getResolution();
       const originalCenter = view.getCenter();
-
-      // Temporarily resize map for capture
       mapRef.current.setSize([width, height]);
       view.setResolution(res);
       view.setCenter(center);
-
       return new Promise((resolve) => {
           mapRef.current?.once('rendercomplete', () => {
               try {
-                  const captureCanvas = document.createElement('canvas');
-                  captureCanvas.width = width;
-                  captureCanvas.height = height;
-                  const ctx = captureCanvas.getContext('2d');
-                  if (!ctx) return resolve(null);
-
-                  // 1. Apply clipping path based on the polygon(s)
+                  const captureCanvas = document.createElement('canvas'); captureCanvas.width = width; captureCanvas.height = height;
+                  const ctx = captureCanvas.getContext('2d'); if (!ctx) return resolve(null);
                   ctx.beginPath();
                   targetFeatures.forEach(feature => {
                       const geom = feature.getGeometry();
-                      if (geom instanceof Polygon) {
-                          const coords = geom.getCoordinates()[0]; // Outer ring
-                          coords.forEach((c, idx) => {
-                              // Project geographic to canvas pixels
-                              const px = (c[0] - extent[0]) / res;
-                              const py = (extent[3] - c[1]) / res;
-                              if (idx === 0) ctx.moveTo(px, py);
-                              else ctx.lineTo(px, py);
-                          });
-                          ctx.closePath();
-                      } else if (geom instanceof MultiPolygon) {
-                          geom.getPolygons().forEach(poly => {
-                             const coords = poly.getCoordinates()[0];
-                             coords.forEach((c, idx) => {
-                                 const px = (c[0] - extent[0]) / res;
-                                 const py = (extent[3] - c[1]) / res;
-                                 if (idx === 0) ctx.moveTo(px, py);
-                                 else ctx.lineTo(px, py);
-                             });
-                             ctx.closePath();
-                          });
-                      }
+                      if (geom instanceof Polygon) { const coords = geom.getCoordinates()[0]; coords.forEach((c, idx) => { const px = (c[0] - extent[0]) / res; const py = (extent[3] - c[1]) / res; if (idx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.closePath(); } 
+                      else if (geom instanceof MultiPolygon) { geom.getPolygons().forEach(poly => { const coords = poly.getCoordinates()[0]; coords.forEach((c, idx) => { const px = (c[0] - extent[0]) / res; const py = (extent[3] - c[1]) / res; if (idx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.closePath(); }); }
                   });
-                  ctx.clip(); // Apply the mask
-
-                  // 2. Combine all visible layers onto the clipped canvas
+                  if (ctx.getLineDash().length > 0) ctx.clip();
                   const layerCanvases = mapElement.current?.querySelectorAll('.ol-layer canvas');
-                  layerCanvases?.forEach((canvasElement: any) => {
-                      if (canvasElement.width > 0) {
-                          const transform = canvasElement.style.transform;
-                          let matrix = [1, 0, 0, 1, 0, 0];
-                          if (transform.indexOf('matrix') !== -1) {
-                              matrix = transform.split('(')[1].split(')')[0].split(',').map(Number);
-                          }
-                          ctx.save();
-                          ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
-                          ctx.drawImage(canvasElement, 0, 0);
-                          ctx.restore();
-                      }
-                  });
-
-                  // Restore original map state
-                  mapRef.current?.setSize(originalSize);
-                  view.setResolution(originalResolution);
-                  view.setCenter(originalCenter);
-                  
-                  resolve({ canvas: captureCanvas, extent });
-              } catch (err) {
-                  console.error("Export error:", err);
-                  resolve(null);
-              }
+                  layerCanvases?.forEach((canvasElement: any) => { if (canvasElement.width > 0) { const transform = canvasElement.style.transform; let matrix = [1, 0, 0, 1, 0, 0]; if (transform.indexOf('matrix') !== -1) matrix = transform.split('(')[1].split(')')[0].split(',').map(Number); ctx.save(); ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]); ctx.drawImage(canvasElement, 0, 0); ctx.restore(); } });
+                  mapRef.current?.setSize(originalSize); view.setResolution(originalResolution); view.setCenter(originalCenter); resolve({ canvas: captureCanvas, extent });
+              } catch (err) { console.error("Export error:", err); resolve(null); }
           });
           mapRef.current?.renderSync();
       });
@@ -593,7 +542,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     overlayRef.current = overlay;
     const baseLayer = new TileLayer({ source: getBasemapSource(basemapId) });
     baseLayerRef.current = baseLayer;
-    const select = new Select({ layers: [ new VectorLayer({ source: sourceRef.current }), new VectorLayer({ source: pointsSourceRef.current }), new VectorLayer({ source: kmlSourceRef.current }) ], style: selectedStyleFunction });
+    const select = new Select({ multi: true, layers: [ new VectorLayer({ source: sourceRef.current }), new VectorLayer({ source: pointsSourceRef.current }), new VectorLayer({ source: kmlSourceRef.current }) ], style: selectedStyleFunction });
     select.on('select', (e) => { 
         if (e.selected.length) {
             const feature = e.selected[0];
@@ -630,8 +579,10 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
         if (f instanceof Feature && f.getGeometry() instanceof Point) {
             showPointPopup(f, (f.getGeometry() as Point).getCoordinates());
         } else {
-            overlayRef.current?.setPosition(undefined);
-            setShowDownloadMenu(false);
+            if (!f) {
+                overlayRef.current?.setPosition(undefined);
+                setShowDownloadMenu(false);
+            }
         }
     });
     mapRef.current = map; return () => map.setTarget(undefined);
