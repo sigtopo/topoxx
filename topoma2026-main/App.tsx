@@ -367,6 +367,7 @@ const App: React.FC = () => {
   const handleManualAddPoint = () => {
     const x = parseCoordinateValue(manualX);
     const y = parseCoordinateValue(manualY);
+    // Fix typo: iNaN -> isNaN
     if (isNaN(x) || isNaN(y)) { alert("Coordonnées invalides."); return; }
     const wgs84 = projectFromZone(x, y, selectedZone); 
     if (!wgs84) { alert("Hors zone أو erreur de projection."); return; }
@@ -693,7 +694,7 @@ const App: React.FC = () => {
                           <div className="absolute top-[-10px] right-[-10px]"><CloseButton onClick={() => setShowExcelHelp(false)} /></div>
                           <div className="bg-neutral-100 px-4 py-2 rounded-t-lg border-b font-bold text-neutral-700 text-sm mb-2 flex items-center gap-2"><i className="fas fa-info-circle text-blue-500"></i> Format de fichier requis (Exemple)</div>
                           <img src="https://ia902900.us.archive.org/14/items/capture-decran-2026-02-01-200134/Capture%20d%27%C3%A9cran%202026-02-01%20200134.png" alt="Format Excel Help" className="w-full h-auto rounded border shadow-inner" />
-                          <div className="mt-3 p-3 bg-blue-50 rounded-lg text-[11px] text-blue-800 italic">* Assurez-vous que vos colonnes sont nommées 'X' et 'Y' (ou 'Easting'/'Northing').</div>
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg text-[11px] text-blue-800 italic">* Assurez-vous que vos colonnes sont nommées 'X' and 'Y' (ou 'Easting'/'Northing').</div>
                       </div>
                   </div>
               )}

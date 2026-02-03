@@ -148,17 +148,52 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     const geometry = feature.getGeometry();
     const type = geometry.getType();
     const label = feature.get('label') || '';
-    const textStyle = new Text({ text: label, font: 'bold 12px Roboto, sans-serif', fill: new Fill({ color: '#ffffff' }), stroke: new Stroke({ color: '#166534', width: 3 }), overflow: true, offsetY: type === 'Point' ? -25 : -10, placement: type === 'LineString' ? 'line' : 'point' });
+    
+    // Label Style - Positioned outside and clear
+    const textStyle = new Text({ 
+        text: label, 
+        font: 'bold 14px Roboto, sans-serif', 
+        fill: new Fill({ color: '#ffffff' }), 
+        stroke: new Stroke({ color: '#000000', width: 4 }), 
+        overflow: true, 
+        offsetY: type === 'Point' ? -35 : -25, // Move further outside
+        placement: type === 'LineString' ? 'line' : 'point',
+        textBaseline: 'bottom'
+    });
+
     if (type === 'Point') {
-        textStyle.getStroke().setColor('#000000');
-        return new Style({ image: new Icon({ src: 'data:image/svg+xml;utf8,' + encodeURIComponent(blueMarkerSvg), anchor: [0.5, 1], scale: 1 }), text: textStyle });
+        return new Style({ 
+            image: new Icon({ 
+                src: 'data:image/svg+xml;utf8,' + encodeURIComponent(blueMarkerSvg), 
+                anchor: [0.5, 1], 
+                scale: 1 
+            }), 
+            text: textStyle 
+        });
     }
-    if (type === 'Polygon' || type === 'MultiPolygon' || type === 'Circle') {
-        const styles = [ new Style({ stroke: new Stroke({ color: '#22c55e', width: 2 }), fill: new Fill({ color: 'rgba(255, 255, 255, 0)' }), text: textStyle }) ];
-        if (type === 'Polygon') { styles.push(new Style({ image: new CircleStyle({ radius: 3, fill: new Fill({ color: '#22c55e' }), stroke: new Stroke({ color: '#fff', width: 1 }) }), geometry: (f) => { const g = f.getGeometry() as Polygon; return new MultiPoint(g.getCoordinates()[0]); } })); }
-        return styles;
+
+    const styles = [
+        new Style({ 
+            stroke: new Stroke({ color: '#00FF40', width: 3 }), 
+            fill: new Fill({ color: 'rgba(0, 255, 64, 0.15)' }), 
+            text: textStyle 
+        })
+    ];
+
+    // Vertices - Red instead of Green
+    if (type === 'Polygon' || type === 'LineString') {
+        const coords = type === 'Polygon' ? geometry.getCoordinates()[0] : geometry.getCoordinates();
+        styles.push(new Style({
+            image: new CircleStyle({
+                radius: 4,
+                fill: new Fill({ color: '#FF0000' }), // Red vertices
+                stroke: new Stroke({ color: '#ffffff', width: 1.5 })
+            }),
+            geometry: new MultiPoint(coords)
+        }));
     }
-    return new Style({ stroke: new Stroke({ color: '#22c55e', width: 2 }), text: textStyle });
+
+    return styles;
   };
 
   const kmlStyleFunction = (feature: any) => {
@@ -203,13 +238,13 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       if (isDeleteModeRef.current) return new Style({ stroke: new Stroke({ color: '#ef4444', width: 4 }), fill: new Fill({ color: 'rgba(239, 68, 68, 0.3)' }), image: new CircleStyle({ radius: 7, fill: new Fill({ color: '#ef4444' }), stroke: new Stroke({ color: '#fff', width: 2 }) }) });
       const baseStyles = feature.get('layerId') ? kmlStyleFunction(feature) : manualStyleFunction(feature);
       const styles = Array.isArray(baseStyles) ? baseStyles : [baseStyles];
-      styles.forEach(s => { const stroke = s.getStroke(); if (stroke) { stroke.setColor('#3b82f6'); stroke.setWidth(3); } });
+      styles.forEach(s => { const stroke = s.getStroke(); if (stroke) { stroke.setColor('#3b82f6'); stroke.setWidth(4); } });
       return styles;
   };
 
   const measureStyle = new Style({ fill: new Fill({ color: 'rgba(255, 255, 255, 0.2)' }), stroke: new Stroke({ color: '#3b82f6', width: 2, lineDash: [10, 10] }), image: new CircleStyle({ radius: 5, stroke: new Stroke({ color: '#3b82f6', width: 2 }), fill: new Fill({ color: '#ffffff' }) }) });
 
-  const pointStyle = (feature: any) => new Style({ image: new Icon({ src: 'data:image/svg+xml;utf8,' + encodeURIComponent(blueMarkerSvg), anchor: [0.5, 1], scale: 1 }), text: new Text({ text: feature.get('label') || '', offsetY: -25, font: '11px Roboto, sans-serif', fill: new Fill({ color: '#ffffff' }), stroke: new Stroke({ color: '#000000', width: 3 }) }) });
+  const pointStyle = (feature: any) => new Style({ image: new Icon({ src: 'data:image/svg+xml;utf8,' + encodeURIComponent(blueMarkerSvg), anchor: [0.5, 1], scale: 1 }), text: new Text({ text: feature.get('label') || '', offsetY: -30, font: 'bold 12px Roboto, sans-serif', fill: new Fill({ color: '#ffffff' }), stroke: new Stroke({ color: '#000000', width: 3 }) }) });
 
   const formatLength = (line: LineString | Polygon, unit: string) => {
     const length = getLength(line);
