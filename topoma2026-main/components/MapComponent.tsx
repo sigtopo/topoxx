@@ -621,8 +621,21 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       const view = mapRef.current.getView(); 
       const center = [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2];
       const res = targetScale ? getResolutionFromScale(targetScale, toLonLat(center)[1]) : view.getResolution()!;
+      
       const width = Math.ceil((extent[2] - extent[0]) / res); 
       const height = Math.ceil((extent[3] - extent[1]) / res);
+
+      // --- MEMORY PROTECTION LIMITS ---
+      // Many browsers limit canvas sides to 16,384px or 32,768px.
+      // Additionally, getImageData allocation (RGBA) uses width * height * 4 bytes.
+      // 60 million pixels = 240MB of buffer, which is a safe common threshold.
+      const MAX_SIDE = 12000;
+      const MAX_PIXELS = 60000000;
+      if (width > MAX_SIDE || height > MAX_SIDE || (width * height) > MAX_PIXELS) {
+          console.error("Extraction resolution too high for browser memory limits.", {width, height});
+          return null;
+      }
+
       const originalSize = mapRef.current.getSize();
       const originalResolution = view.getResolution();
       const originalCenter = view.getCenter();

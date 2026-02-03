@@ -400,7 +400,11 @@ const App: React.FC = () => {
         try {
             const result = await mapComponentRef.current!.getMapCanvas(currentScale, selectedLayerId, 'LAYER');
             clearInterval(timer); 
-            if (!result) throw new Error("Empty Canvas");
+            if (!result) {
+                setStep('IDLE');
+                alert("La zone sélectionnée est trop grande ou l'échelle est trop détaillée pour l'extraction. Veuillez réduire la zone ou choisir une échelle moins précise (Ex: 1:5000 au lieu de 1:500).");
+                return;
+            }
             const { canvas, extent } = result;
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
@@ -447,7 +451,7 @@ const App: React.FC = () => {
             console.error(e);
             setStep('IDLE'); 
             clearInterval(timer); 
-            alert("Erreur lors du traitement. Vérifiez que la zone est entièrement chargée."); 
+            alert("Erreur lors du traitement. Vérifiez que la zone est entièrement chargée ou réduisez l'échelle."); 
         }
     }, 1000);
   };
