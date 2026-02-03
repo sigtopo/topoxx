@@ -581,23 +581,26 @@ const App: React.FC = () => {
                   </div>
                   <div className="flex-grow overflow-y-auto p-3 bg-neutral-50">
                       <div className="grid grid-cols-4 gap-2 mb-4">
-                          <button onClick={() => handleFileClick(kmlInputRef)} title="KML/KMZ" className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-blue-50 hover:border-blue-300 transition-all group">
-                              <i className="fas fa-globe text-2xl text-blue-500 group-hover:scale-110 transition-transform"></i>
-                              <span className="text-[9px] font-bold text-neutral-500 mt-1">KML</span>
+                          <button onClick={() => handleFileClick(kmlInputRef)} title="KML/KMZ" className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-blue-50 hover:border-blue-300 transition-all group overflow-hidden">
+                              <img src="https://ia601305.us.archive.org/13/items/chat-gpt-image-feb-3-2026-02-44-58-am-1/ChatGPT%20Image%20Feb%203%2C%202026%2C%2002_44_58%20AM%20%281%29.ico" alt="KMZ" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform" />
+                              <span className="text-[9px] font-bold text-neutral-500 mt-1">KML/KMZ</span>
                           </button>
-                          <button onClick={() => handleFileClick(shpInputRef)} title="Shapefile" className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-green-50 hover:border-green-300 transition-all group">
-                              <i className="fas fa-shapes text-2xl text-green-500 group-hover:scale-110 transition-transform"></i>
-                              <span className="text-[9px] font-bold text-neutral-500 mt-1">SHP</span>
+                          <button onClick={() => handleFileClick(shpInputRef)} title="Shapefile" className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-green-50 hover:border-green-300 transition-all group overflow-hidden">
+                              <img src="https://cdn-icons-png.flaticon.com/512/3979/3979411.png" alt="SHP" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform" />
+                              <span className="text-[9px] font-bold text-neutral-500 mt-1">SHP (ZIP)</span>
                           </button>
                           <button onClick={() => handleFileClick(geojsonInputRef)} title="GeoJSON" className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-teal-50 hover:border-teal-300 transition-all group">
                               <i className="fas fa-file-code text-2xl text-teal-500 group-hover:scale-110 transition-transform"></i>
                               <span className="text-[9px] font-bold text-neutral-500 mt-1">JSON</span>
                           </button>
-                          <button onClick={() => handleFileClick(dxfInputRef)} title="DXF AutoCAD" className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-purple-50 hover:border-purple-300 transition-all group">
-                              <i className="fas fa-pencil-ruler text-2xl text-purple-500 group-hover:scale-110 transition-transform"></i>
-                              <span className="text-[9px] font-bold text-neutral-500 mt-1">DXF</span>
-                          </button>
+
+                          <button onClick={() => handleFileClick(dxfInputRef)} title="DXF AutoCAD"  className="flex flex-col items-center justify-center p-2 bg-white border border-neutral-200 rounded shadow-sm hover:bg-purple-50 hover:border-purple-300 transition-all group overflow-hidden"
+>  <img src="https://fileinfo.com/img/icons/files/256/dxf-257.png"    alt="DXF"    className="w-8 h-8 object-contain group-hover:scale-110 transition-transform"  />
+  <span className="text-[9px] font-bold text-neutral-500 mt-1">DXF</span>
+</button>
                       </div>
+                      
+  
 
                       <div className="border bg-white mb-2 shadow-sm rounded-sm">
                           <div className="bg-neutral-200 px-2 py-1.5 text-xs font-bold border-b flex items-center gap-2">Extraction Raster</div>
