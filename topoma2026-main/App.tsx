@@ -167,7 +167,8 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   
-  const [selectedZone, setSelectedZone] = useState<string>('EPSG:26191'); 
+  // WGS 84 as DEFAULT
+  const [selectedZone, setSelectedZone] = useState<string>('EPSG:4326'); 
   const [selectedExcelFile, setSelectedExcelFile] = useState<File | null>(null);
   
   const [layers, setLayers] = useState<LayerInfo[]>([]);
@@ -397,7 +398,6 @@ const App: React.FC = () => {
     const timer = setInterval(() => setCountdown((prev) => prev <= 1 ? (clearInterval(timer), 0) : prev - 1), 1000);
     setTimeout(async () => {
         try {
-            // Force clipMode to LAYER
             const result = await mapComponentRef.current!.getMapCanvas(currentScale, selectedLayerId, 'LAYER');
             clearInterval(timer); 
             if (!result) throw new Error("Empty Canvas");

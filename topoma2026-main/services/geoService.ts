@@ -1,14 +1,13 @@
+
 import proj4 from 'proj4';
 
-// تعريف المساقط العالمية
+// Projection definitions
 proj4.defs("EPSG:3857", "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs");
 proj4.defs("EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs");
 
 /**
- * تعريف النطاقات المغربية (Maroc Lambert)
+ * Maroc Lambert Definitions
  * Reference: https://epsg.io/
- * Ellipsoid: Clarke 1880 (IGN) -> a=6378249.2, b=6356515.0
- * TOWGS84: 31, 146, 47, 0, 0, 0, 0
  */
 
 // Zone I (Nord Maroc) - EPSG:26191
@@ -41,7 +40,7 @@ export const convertToWGS84 = (x: number, y: number): WGS84Coords => {
 };
 
 /**
- * دالة للتحويل المباشر بناءً على النطاق المحدد
+ * Direct projection conversion based on zone code
  */
 export const projectFromZone = (x: number, y: number, zoneCode: string): number[] | null => {
   try {
@@ -74,20 +73,20 @@ export const projectToZone = (lon: number, lat: number, zoneCode: string): { x: 
     }
 };
 
-// حساب مقياس الرسم الحقيقي عند خط عرض معين
+// Calculate real map scale at specific latitude
 export const calculateScale = (resolution: number, lat: number): string => {
   const groundResolution = resolution * Math.cos(lat * Math.PI / 180);
   const scale = groundResolution / 0.000264583333;
   return scale.toFixed(0);
 };
 
-// تحويل مقياس الرسم إلى دقة خريطة (Resolution)
+// Convert scale to map resolution
 export const getResolutionFromScale = (scaleValue: number, lat: number): number => {
   const resolution = (scaleValue * 0.000264583333) / Math.cos(lat * Math.PI / 180);
   return resolution;
 };
 
-// تنسيق المساحة للعرض
+// Area formatting
 export const formatArea = (area: number): { formattedM2: string, formattedHa: string } => {
   const formattedM2 = area.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const hectares = Math.floor(area / 10000);
@@ -150,7 +149,6 @@ export const searchPlaces = async (query: string): Promise<SearchResult[]> => {
 // Fetch Elevation (Z)
 export const fetchElevation = async (lat: number, lon: number): Promise<number> => {
     try {
-        // Using Open-Elevation API (Public/Free)
         const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
         const data = await response.json();
         if (data && data.results && data.results.length > 0) {
