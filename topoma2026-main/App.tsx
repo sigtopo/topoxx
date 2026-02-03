@@ -367,10 +367,9 @@ const App: React.FC = () => {
   const handleManualAddPoint = () => {
     const x = parseCoordinateValue(manualX);
     const y = parseCoordinateValue(manualY);
-    // Fix typo: iNaN -> isNaN
     if (isNaN(x) || isNaN(y)) { alert("Coordonnées invalides."); return; }
     const wgs84 = projectFromZone(x, y, selectedZone); 
-    if (!wgs84) { alert("Hors zone أو erreur de projection."); return; }
+    if (!wgs84) { alert("Hors zone ou erreur de projection."); return; }
     const label = `pt ${pointCounter.toString().padStart(2, '0')}`;
     mapComponentRef.current?.addManualPoint(wgs84[0], wgs84[1], label);
     setPointCounter(prev => prev + 1);
@@ -398,7 +397,8 @@ const App: React.FC = () => {
     const timer = setInterval(() => setCountdown((prev) => prev <= 1 ? (clearInterval(timer), 0) : prev - 1), 1000);
     setTimeout(async () => {
         try {
-            const result = await mapComponentRef.current!.getMapCanvas(currentScale, selectedLayerId);
+            // Force clipMode to LAYER
+            const result = await mapComponentRef.current!.getMapCanvas(currentScale, selectedLayerId, 'LAYER');
             clearInterval(timer); 
             if (!result) throw new Error("Empty Canvas");
             const { canvas, extent } = result;
@@ -640,7 +640,7 @@ const App: React.FC = () => {
                               <div className="flex justify-between items-center mb-2 border-b pb-1"><span className="text-xs font-bold flex items-center gap-1.5">Import Excel XY <button onClick={() => setShowExcelHelp(true)} className="text-blue-500 hover:text-blue-700 text-sm"><i className="fas fa-info-circle"></i></button></span><CloseButton onClick={() => setShowExcelPanel(false)} /></div>
                               <div className="space-y-3">
                                   <div><label className="block text-[10px] mb-0.5 text-neutral-500">Projection (Zone)</label><select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)} className="w-full text-xs border rounded p-1 bg-neutral-50">{ZONES.map(z => <option key={z.code} value={z.code}>{z.label}</option>)}</select></div>
-                                  <div className="border border-dashed border-neutral-300 rounded-lg p-3 text-center bg-neutral-50"><i className="fas fa-folder-open text-blue-500 mb-1"></i><button onClick={() => handleFileClick(excelInputRef)} className="block w-full text-xs text-blue-600 font-bold hover:underline mb-1">Choisir un fichier</button><div className="text-[10px] text-neutral-400 truncate">{selectedExcelFile ? selectedExcelFile.name : "Aucun fichier sélectionné"}</div></div>
+                                  <div className="border border-dashed border-neutral-300 rounded-lg p-3 text-center bg-neutral-50"><i className="fas fa-folder-open text-blue-500 mb-1"></i><button onClick={() => handleFileClick(excelInputRef)} className="block w-full text-xs text-blue-600 font-bold hover:underline mb-1">Choisir un fichier</button><div className="text-[10px] text-neutral-400 truncate">{selectedExcelFile ? selectedExcelFile.name : "Aucun fichier seleccionado"}</div></div>
                                   <button onClick={processExcelFile} disabled={!selectedExcelFile} className={`w-full text-white text-xs py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${selectedExcelFile ? 'bg-green-600 hover:bg-green-700 shadow-md' : 'bg-neutral-300 cursor-not-allowed'}`}><i className="fas fa-upload text-[10px]"></i> Charger les points</button>
                               </div>
                           </div>
@@ -694,7 +694,7 @@ const App: React.FC = () => {
                           <div className="absolute top-[-10px] right-[-10px]"><CloseButton onClick={() => setShowExcelHelp(false)} /></div>
                           <div className="bg-neutral-100 px-4 py-2 rounded-t-lg border-b font-bold text-neutral-700 text-sm mb-2 flex items-center gap-2"><i className="fas fa-info-circle text-blue-500"></i> Format de fichier requis (Exemple)</div>
                           <img src="https://ia902900.us.archive.org/14/items/capture-decran-2026-02-01-200134/Capture%20d%27%C3%A9cran%202026-02-01%20200134.png" alt="Format Excel Help" className="w-full h-auto rounded border shadow-inner" />
-                          <div className="mt-3 p-3 bg-blue-50 rounded-lg text-[11px] text-blue-800 italic">* Assurez-vous que vos colonnes sont nommées 'X' and 'Y' (ou 'Easting'/'Northing').</div>
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg text-[11px] text-blue-800 italic">* Assurez-وزن que vos colonnes sont nommées 'X' and 'Y' (ou 'Easting'/'Northing').</div>
                       </div>
                   </div>
               )}

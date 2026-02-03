@@ -55,7 +55,7 @@ interface MapComponentProps {
 }
 
 export interface MapComponentRef {
-  getMapCanvas: (targetScale?: number, layerId?: string) => Promise<{ canvas: HTMLCanvasElement, extent: number[] } | null>;
+  getMapCanvas: (targetScale?: number, layerId?: string, clipMode?: 'CANVAS' | 'LAYER') => Promise<{ canvas: HTMLCanvasElement, extent: number[] } | null>;
   loadKML: (file: File, layerId: string) => void;
   loadShapefile: (file: File, layerId: string) => void;
   loadDXF: (file: File, zoneCode: string, layerId: string) => void;
@@ -148,18 +148,19 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     const geometry = feature.getGeometry();
     const type = geometry.getType();
     const label = feature.get('label') || '';
+    const isHovered = feature.get('hover') === true;
     
-    // Label Style - Positioned outside and clear
-    const textStyle = new Text({ 
+    // Label shown only on hover
+    const textStyle = isHovered ? new Text({ 
         text: label, 
         font: 'bold 14px Roboto, sans-serif', 
         fill: new Fill({ color: '#ffffff' }), 
         stroke: new Stroke({ color: '#000000', width: 4 }), 
         overflow: true, 
-        offsetY: type === 'Point' ? -35 : -25, // Move further outside
+        offsetY: type === 'Point' ? -35 : -25, 
         placement: type === 'LineString' ? 'line' : 'point',
         textBaseline: 'bottom'
-    });
+    }) : undefined;
 
     if (type === 'Point') {
         return new Style({ 
@@ -175,18 +176,17 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     const styles = [
         new Style({ 
             stroke: new Stroke({ color: '#00FF40', width: 3 }), 
-            fill: new Fill({ color: 'rgba(0, 255, 64, 0.15)' }), 
+            fill: new Fill({ color: 'rgba(0, 255, 64, 0)' }), // Fully transparent center
             text: textStyle 
         })
     ];
 
-    // Vertices - Red instead of Green
     if (type === 'Polygon' || type === 'LineString') {
         const coords = type === 'Polygon' ? geometry.getCoordinates()[0] : geometry.getCoordinates();
         styles.push(new Style({
             image: new CircleStyle({
                 radius: 4,
-                fill: new Fill({ color: '#FF0000' }), // Red vertices
+                fill: new Fill({ color: '#FF0000' }), 
                 stroke: new Stroke({ color: '#ffffff', width: 1.5 })
             }),
             geometry: new MultiPoint(coords)
@@ -199,6 +199,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
   const kmlStyleFunction = (feature: any) => {
       const layerId = feature.get('layerId');
       const labelField = layerLabelFieldsRef.current[layerId];
+      const isHovered = feature.get('hover') === true;
       let labelText = '';
       if (labelField) {
           const val = feature.get(labelField);
@@ -209,7 +210,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
           labelText = feature.get('name');
       }
 
-      const textStyle = new Text({
+      const textStyle = (isHovered && labelText) ? new Text({
           text: labelText,
           font: 'bold 12px Roboto, sans-serif',
           fill: new Fill({ color: '#000000' }), 
@@ -217,7 +218,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
           offsetY: -15,
           overflow: true,
           placement: feature.getGeometry()?.getType() === 'LineString' ? 'line' : 'point'
-      });
+      }) : undefined;
 
       const geometry = feature.getGeometry();
       const type = geometry.getType();
@@ -225,7 +226,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       return new Style({
           stroke: new Stroke({ color: '#ff0000', width: 3 }), 
           fill: new Fill({ color: 'rgba(0, 0, 0, 0)' }), 
-          text: labelText ? textStyle : undefined,
+          text: textStyle,
           image: type === 'Point' ? new CircleStyle({
               radius: 7,
               fill: new Fill({ color: '#ff0000' }), 
@@ -235,16 +236,22 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
   };
 
   const selectedStyleFunction = (feature: any) => {
-      if (isDeleteModeRef.current) return new Style({ stroke: new Stroke({ color: '#ef4444', width: 4 }), fill: new Fill({ color: 'rgba(239, 68, 68, 0.3)' }), image: new CircleStyle({ radius: 7, fill: new Fill({ color: '#ef4444' }), stroke: new Stroke({ color: '#fff', width: 2 }) }) });
+      if (isDeleteModeRef.current) return new Style({ stroke: new Stroke({ color: '#ef4444', width: 4 }), fill: new Fill({ color: 'rgba(239, 68, 68, 0)' }), image: new CircleStyle({ radius: 7, fill: new Fill({ color: '#ef4444' }), stroke: new Stroke({ color: '#fff', width: 2 }) }) });
       const baseStyles = feature.get('layerId') ? kmlStyleFunction(feature) : manualStyleFunction(feature);
       const styles = Array.isArray(baseStyles) ? baseStyles : [baseStyles];
       styles.forEach(s => { const stroke = s.getStroke(); if (stroke) { stroke.setColor('#3b82f6'); stroke.setWidth(4); } });
       return styles;
   };
 
-  const measureStyle = new Style({ fill: new Fill({ color: 'rgba(255, 255, 255, 0.2)' }), stroke: new Stroke({ color: '#3b82f6', width: 2, lineDash: [10, 10] }), image: new CircleStyle({ radius: 5, stroke: new Stroke({ color: '#3b82f6', width: 2 }), fill: new Fill({ color: '#ffffff' }) }) });
+  const measureStyle = new Style({ fill: new Fill({ color: 'rgba(255, 255, 255, 0)' }), stroke: new Stroke({ color: '#3b82f6', width: 2, lineDash: [10, 10] }), image: new CircleStyle({ radius: 5, stroke: new Stroke({ color: '#3b82f6', width: 2 }), fill: new Fill({ color: '#ffffff' }) }) });
 
-  const pointStyle = (feature: any) => new Style({ image: new Icon({ src: 'data:image/svg+xml;utf8,' + encodeURIComponent(blueMarkerSvg), anchor: [0.5, 1], scale: 1 }), text: new Text({ text: feature.get('label') || '', offsetY: -30, font: 'bold 12px Roboto, sans-serif', fill: new Fill({ color: '#ffffff' }), stroke: new Stroke({ color: '#000000', width: 3 }) }) });
+  const pointStyle = (feature: any) => {
+      const isHovered = feature.get('hover') === true;
+      return new Style({ 
+          image: new Icon({ src: 'data:image/svg+xml;utf8,' + encodeURIComponent(blueMarkerSvg), anchor: [0.5, 1], scale: 1 }), 
+          text: isHovered ? new Text({ text: feature.get('label') || '', offsetY: -30, font: 'bold 12px Roboto, sans-serif', fill: new Fill({ color: '#ffffff' }), stroke: new Stroke({ color: '#000000', width: 3 }) }) : undefined
+      });
+  };
 
   const formatLength = (line: LineString | Polygon, unit: string) => {
     const length = getLength(line);
@@ -533,7 +540,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     clearAll: () => { sourceRef.current.clear(); kmlSourceRef.current.clear(); pointsSourceRef.current.clear(); measureSourceRef.current.clear(); activeMeasurementsRef.current = []; overlayRef.current?.setPosition(undefined); notifyManualFeatures(); layerLabelFieldsRef.current = {}; },
     undo: () => { const f = sourceRef.current.getFeatures(); if (f.length > 0) sourceRef.current.removeFeature(f[f.length-1]); notifyManualFeatures(); },
     deleteSelectedFeature: () => { const s = selectInteractionRef.current?.getFeatures(); if (s) { s.forEach(f => { if (sourceRef.current.hasFeature(f)) sourceRef.current.removeFeature(f); if (pointsSourceRef.current.hasFeature(f)) pointsSourceRef.current.removeFeature(f); if (kmlSourceRef.current.hasFeature(f)) kmlSourceRef.current.removeFeature(f); }); s.clear(); notifyManualFeatures(); } },
-    getMapCanvas: async (targetScale, layerId) => {
+    getMapCanvas: async (targetScale, layerId, clipMode = 'CANVAS') => {
       if (!mapRef.current) return null;
       let targetFeatures = layerId === 'manual' ? sourceRef.current.getFeatures() : kmlSourceRef.current.getFeatures().filter(f => f.get('layerId') === layerId);
       if (targetFeatures.length === 0 && layerId !== 'manual') { const f = sourceRef.current.getFeatureById(layerId!) || pointsSourceRef.current.getFeatureById(layerId!); if (f) targetFeatures = [f]; }
@@ -547,6 +554,11 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
       const originalSize = mapRef.current.getSize();
       const originalResolution = view.getResolution();
       const originalCenter = view.getCenter();
+      
+      // Temporarily hide the drawing layers so they don't appear in the TIFF
+      const layersToHide = mapRef.current.getLayers().getArray().filter(l => l instanceof VectorLayer);
+      layersToHide.forEach(l => l.setVisible(false));
+
       mapRef.current.setSize([width, height]);
       view.setResolution(res);
       view.setCenter(center);
@@ -555,15 +567,22 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
               try {
                   const captureCanvas = document.createElement('canvas'); captureCanvas.width = width; captureCanvas.height = height;
                   const ctx = captureCanvas.getContext('2d'); if (!ctx) return resolve(null);
-                  ctx.beginPath();
-                  targetFeatures.forEach(feature => {
-                      const geom = feature.getGeometry();
-                      if (geom instanceof Polygon) { const coords = geom.getCoordinates()[0]; coords.forEach((c, idx) => { const px = (c[0] - extent[0]) / res; const py = (extent[3] - c[1]) / res; if (idx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.closePath(); } 
-                      else if (geom instanceof MultiPolygon) { geom.getPolygons().forEach(poly => { const coords = poly.getCoordinates()[0]; coords.forEach((c, idx) => { const px = (c[0] - extent[0]) / res; const py = (extent[3] - c[1]) / res; if (idx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.closePath(); }); }
-                  });
-                  if (ctx.getLineDash().length > 0) ctx.clip();
+                  
+                  if (clipMode === 'LAYER') {
+                      ctx.beginPath();
+                      targetFeatures.forEach(feature => {
+                          const geom = feature.getGeometry();
+                          if (geom instanceof Polygon) { const coords = geom.getCoordinates()[0]; coords.forEach((c, idx) => { const px = (c[0] - extent[0]) / res; const py = (extent[3] - c[1]) / res; if (idx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.closePath(); } 
+                          else if (geom instanceof MultiPolygon) { geom.getPolygons().forEach(poly => { const coords = poly.getCoordinates()[0]; coords.forEach((c, idx) => { const px = (c[0] - extent[0]) / res; const py = (extent[3] - c[1]) / res; if (idx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.closePath(); }); }
+                      });
+                      ctx.clip();
+                  }
+
                   const layerCanvases = mapElement.current?.querySelectorAll('.ol-layer canvas');
                   layerCanvases?.forEach((canvasElement: any) => { if (canvasElement.width > 0) { const transform = canvasElement.style.transform; let matrix = [1, 0, 0, 1, 0, 0]; if (transform.indexOf('matrix') !== -1) matrix = transform.split('(')[1].split(')')[0].split(',').map(Number); ctx.save(); ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]); ctx.drawImage(canvasElement, 0, 0); ctx.restore(); } });
+                  
+                  // Restore drawing layers
+                  layersToHide.forEach(l => l.setVisible(true));
                   mapRef.current?.setSize(originalSize); view.setResolution(originalResolution); view.setCenter(originalCenter); resolve({ canvas: captureCanvas, extent });
               } catch (err) { console.error("Export error:", err); resolve(null); }
           });
@@ -607,7 +626,33 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>(({ onSelecti
     const snap = new Snap({ source: sourceRef.current }); snap.setActive(false); snapInteractionRef.current = snap;
     const map = new Map({ target: mapElement.current!, layers: [ baseLayer, new VectorLayer({ source: kmlSourceRef.current, style: kmlStyleFunction }), new VectorLayer({ source: pointsSourceRef.current, style: pointStyle }), new VectorLayer({ source: measureSourceRef.current, style: measureStyle }), new VectorLayer({ source: sourceRef.current, style: manualStyleFunction }) ], view: new View({ center: fromLonLat([-7.5898, 33.5731]), zoom: 6, maxZoom: 22 }), controls: [new Zoom(), new ScaleLine()], overlays: [overlay] });
     map.addInteraction(select); map.addInteraction(modify); map.addInteraction(snap);
-    map.on('pointermove', (e) => { if (e.dragging) return; const c = toLonLat(e.coordinate); if (onMouseMove) onMouseMove(`${c[0]>=0?'E':'W'}${Math.abs(c[0]).toFixed(4)}`, `${c[1]>=0?'N':'S'}${Math.abs(c[1]).toFixed(4)}`); mapElement.current!.style.cursor = map.hasFeatureAtPixel(e.pixel) ? 'pointer' : ''; });
+    
+    let currentHoveredFeature: any = null;
+
+    map.on('pointermove', (e) => { 
+        if (e.dragging) return; 
+        const c = toLonLat(e.coordinate); 
+        if (onMouseMove) onMouseMove(`${c[0]>=0?'E':'W'}${Math.abs(c[0]).toFixed(4)}`, `${c[1]>=0?'N':'S'}${Math.abs(c[1]).toFixed(4)}`); 
+        
+        // Hover logic for labels
+        const pixel = e.pixel;
+        const feature = map.forEachFeatureAtPixel(pixel, (ft) => ft);
+        
+        if (feature !== currentHoveredFeature) {
+            if (currentHoveredFeature) {
+                currentHoveredFeature.set('hover', false);
+            }
+            if (feature instanceof Feature) {
+                feature.set('hover', true);
+                currentHoveredFeature = feature;
+            } else {
+                currentHoveredFeature = null;
+            }
+        }
+
+        mapElement.current!.style.cursor = feature ? 'pointer' : ''; 
+    });
+
     map.on('click', (e) => { 
         if (drawInteractionRef.current) return; 
         const f = map.forEachFeatureAtPixel(e.pixel, (ft) => ft); 
