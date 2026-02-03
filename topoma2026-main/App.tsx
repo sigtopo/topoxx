@@ -512,7 +512,7 @@ const App: React.FC = () => {
           </div>
 
           <button onClick={() => setToolboxOpen(!toolboxOpen)} className={`h-8 px-3 flex items-center gap-2 rounded border mr-2 transition-all ${toolboxOpen ? 'bg-neutral-300 border-neutral-400 text-neutral-800' : 'bg-white hover:bg-neutral-200 border-neutral-300 text-neutral-600'}`}>
-              <i className="fas fa-file-image text-green-700"></i> <span className="text-xs font-bold hidden md:inline">Exporter GeoTIFF</span>
+              <i className="fas fa-file-image text-green-700"></i> <span className="text-xs font-bold hidden md:inline">Importer Exporter GeoTIFF</span>
           </button>
 
           <div className="flex items-center px-2 border-r border-neutral-300 gap-1">
