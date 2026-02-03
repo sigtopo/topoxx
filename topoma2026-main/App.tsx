@@ -131,10 +131,10 @@ const DeveloperFooter: React.FC = () => (
         </p>
         
         <div className="flex justify-center gap-4 mb-4">
-            <a href="#" className="text-blue-600 text-base hover:scale-110 transition-transform"><i className="fab fa-facebook"></i></a>
-            <a href="#" className="text-pink-600 text-base hover:scale-110 transition-transform"><i className="fab fa-instagram"></i></a>
-            <a href="#" className="text-blue-800 text-base hover:scale-110 transition-transform"><i className="fab fa-linkedin"></i></a>
-            <a href="#" className="text-green-500 text-base hover:scale-110 transition-transform"><i className="fab fa-whatsapp"></i></a>
+            <a href="https://facebook.com/Jilitelmostafa" className="text-blue-600 text-base hover:scale-110 transition-transform"><i className="fab fa-facebook"></i></a>
+            <a href="https://geotoposig.com/" className="text-pink-600 text-base hover:scale-110 transition-transform"><i className="fab fa-instagram"></i></a>
+            <a href="https://www.linkedin.com/in/Jilitelmostafa" className="text-blue-800 text-base hover:scale-110 transition-transform"><i className="fab fa-linkedin"></i></a>
+            <a href="https://wa.me/212668090285" className="text-green-500 text-base hover:scale-110 transition-transform"><i className="fab fa-whatsapp"></i></a>
         </div>
 
         <p className="text-[10px] text-neutral-400 font-medium mb-3">Version 1.0 | © 2026 Tous droits réservés</p>
